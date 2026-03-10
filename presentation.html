@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GTM Agent — Architecture Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* =============================================
+       DESIGN SYSTEM
+    ============================================= */
+    :root {
+      --bg-base:       #0a0b14;
+      --bg-surface:    #0f1022;
+      --bg-card:       #141629;
+      --bg-card-hover: #1a1e35;
+      --border:        rgba(99,102,241,0.18);
+      --border-bright: rgba(99,102,241,0.45);
+
+      --indigo:        #6366f1;
+      --indigo-light:  #818cf8;
+      --violet:        #8b5cf6;
+      --cyan:          #22d3ee;
+      --emerald:       #10b981;
+      --rose:          #f43f5e;
+      --amber:         #f59e0b;
+
+      --text-primary:   #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted:     #475569;
+
+      --gradient-hero: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+      --gradient-card: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.04) 100%);
+      --glow-indigo:   0 0 40px rgba(99,102,241,0.25);
+      --glow-violet:   0 0 40px rgba(139,92,246,0.25);
+
+      --radius-sm:  6px;
+      --radius-md:  12px;
+      --radius-lg:  18px;
+      --radius-xl:  24px;
+
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* =============================================
+       SCROLLBAR
+    ============================================= */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--indigo); border-radius: 3px; }
+
+    /* =============================================
+       NAV
+    ============================================= */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(10,11,20,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      display: block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .nav-links a:hover {
+      color: var(--text-primary);
+      background: rgba(99,102,241,0.12);
+    }
+    .nav-links a.active {
+      color: var(--indigo-light);
+      background: rgba(99,102,241,0.15);
+    }
+
+    /* =============================================
+       HERO
+    ============================================= */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 40px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .hero-bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.35;
+    }
+    .hero-bg-orb-1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #6366f1, transparent);
+      top: -200px; left: -100px;
+    }
+    .hero-bg-orb-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #8b5cf6, transparent);
+      bottom: -100px; right: -50px;
+    }
+    .hero-bg-orb-3 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, #22d3ee, transparent);
+      top: 30%; right: 10%;
+      opacity: 0.2;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--border-bright);
+      background: rgba(99,102,241,0.08);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--indigo-light);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      animation: fadeInDown 0.6s ease both;
+    }
+    .hero-badge-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    .hero h1 {
+      font-size: clamp(42px, 7vw, 86px);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      animation: fadeInDown 0.6s 0.1s ease both;
+    }
+    .hero h1 span {
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 22px);
+      font-weight: 400;
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin-bottom: 40px;
+      animation: fadeInDown 0.6s 0.2s ease both;
+    }
+
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 52px;
+      animation: fadeInDown 0.6s 0.3s ease both;
+    }
+    .hero-pill {
+      padding: 6px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: rgba(15,16,34,0.7);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .hero-pill strong {
+      color: var(--text-primary);
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 14px;
+      animation: fadeInDown 0.6s 0.4s ease both;
+    }
+    .btn-primary {
+      padding: 12px 28px;
+      border-radius: var(--radius-md);
+      background: var(--gradient-hero);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: var(--glow-indigo);
+    }
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .btn-ghost {
+      padding: 12px 28px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-bright);
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .btn-ghost:hover { background: rgba(99,102,241,0.1); transform: translateY(-1px); }
+
+    /* stat strip below hero */
+    .stat-strip {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+      padding: 28px 40px;
+    }
+    .stat-item {
+      flex: 1;
+      max-width: 200px;
+      text-align: center;
+      padding: 0 32px;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-value {
+      font-size: 30px;
+      font-weight: 800;
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: block;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* =============================================
+       SECTIONS
+    ============================================= */
+    section {
+      padding: 96px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--indigo);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .section-desc {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 48px;
+    }
+
+    /* =============================================
+       CARDS
+    ============================================= */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+    }
+    .card:hover {
+      border-color: var(--border-bright);
+      box-shadow: var(--glow-indigo);
+      transform: translateY(-2px);
+    }
+
+    /* =============================================
+       TECH STACK GRID
+    ============================================= */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .tech-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.25s;
+    }
+    .tech-card:hover {
+      border-color: var(--border-bright);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--glow-indigo);
+    }
+
+    .tech-icon {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .tech-info { min-width: 0; }
+    .tech-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .tech-role { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* =============================================
+       ARCHITECTURE DIAGRAM (SVG-based)
+    ============================================= */
+    .arch-diagram-wrapper {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      overflow-x: auto;
+    }
+
+    /* =============================================
+       FLOW DIAGRAM
+    ============================================= */
+    .flow-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .flow-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .flow-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--gradient-hero);
+    }
+
+    .flow-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .flow-card-icon {
+      width: 32px; height: 32px;
+      border-radius: var(--radius-sm);
+      background: rgba(99,102,241,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .flow-step {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+    .flow-step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(99,102,241,0.2);
+      border: 1px solid var(--border-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--indigo-light);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .flow-step-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .flow-step-text strong { color: var(--text-primary); }
+    .flow-arrow {
+      width: 20px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--indigo);
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* =============================================
+       CRON TABLE
+    ============================================= */
+    .cron-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .cron-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cron-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .cron-card.post-cron::after    { background: var(--indigo); }
+    .cron-card.monitor-cron::after { background: var(--violet); }
+    .cron-card.gen-cron::after     { background: var(--cyan); }
+
+    .cron-schedule {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--indigo-light);
+      background: rgba(99,102,241,0.1);
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .cron-name { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+    .cron-desc { font-size: 13px; color: var(--text-secondary); }
+
+    /* =============================================
+       PLATFORM TABLE
+    ============================================= */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .platform-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      transition: all 0.25s;
+    }
+    .platform-card:hover {
+      border-color: var(--border-bright);
+      box-shadow: var(--glow-indigo);
+      transform: translateY(-2px);
+    }
+
+    .platform-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .platform-logo {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .platform-name { font-size: 17px; font-weight: 700; }
+    .platform-sub  { font-size: 12px; color: var(--text-muted); }
+
+    .platform-prop {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(99,102,241,0.08);
+      font-size: 13px;
+    }
+    .platform-prop:last-child { border-bottom: none; }
+    .platform-prop-key  { color: var(--text-muted); }
+    .platform-prop-val  {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--indigo-light);
+      background: rgba(99,102,241,0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+      max-width: 200px;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    /* =============================================
+       DB COLLECTIONS
+    ============================================= */
+    .db-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .db-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .db-card-header {
+      background: rgba(99,102,241,0.1);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .db-collection-icon { font-size: 18px; }
+    .db-collection-name {
+      font-size: 14px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--indigo-light);
+    }
+    .db-card-body { padding: 14px 18px; }
+    .db-field {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      font-size: 12px;
+    }
+    .db-field-name {
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+    }
+    .db-field-type {
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+    .db-field-badge {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-pk  { background: rgba(99,102,241,0.25); color: var(--indigo-light); }
+    .badge-fk  { background: rgba(245,158,11,0.2);  color: var(--amber); }
+    .badge-uk  { background: rgba(16,185,129,0.2);  color: var(--emerald); }
+
+    /* =============================================
+       PHASE TIMELINE
+    ============================================= */
+    .timeline {
+      position: relative;
+      padding-left: 40px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 12px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--indigo), transparent);
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 36px;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -30px;
+      top: 12px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--indigo);
+      background: var(--bg-base);
+      transform: translateX(-3px);
+    }
+    .timeline-dot.done { background: var(--indigo); box-shadow: 0 0 12px var(--indigo); }
+    .timeline-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      transition: all 0.25s;
+    }
+    .timeline-card:hover {
+      border-color: var(--border-bright);
+      box-shadow: var(--glow-indigo);
+    }
+    .timeline-phase {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--indigo);
+      margin-bottom: 4px;
+    }
+    .timeline-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .timeline-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .timeline-tag {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    /* =============================================
+       CODE BLOCK
+    ============================================= */
+    .code-block {
+      background: #0d0f1e;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .code-block .kw  { color: #c792ea; }
+    .code-block .ty  { color: #82aaff; }
+    .code-block .st  { color: #c3e88d; }
+    .code-block .co  { color: #546e7a; }
+    .code-block .nu  { color: #f78c6c; }
+    .code-block .fn  { color: #82aaff; }
+    .code-block .pl  { color: #89ddff; }
+
+    /* =============================================
+       SECURITY SECTION
+    ============================================= */
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .security-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      gap: 14px;
+    }
+    .security-icon {
+      font-size: 22px;
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm);
+      background: rgba(99,102,241,0.12);
+      flex-shrink: 0;
+    }
+    .security-title  { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .security-detail { font-size: 12px; color: var(--text-secondary); }
+
+    /* =============================================
+       RATE LIMITS TABLE
+    ============================================= */
+    .table-wrapper {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: rgba(99,102,241,0.1); }
+    th {
+      padding: 14px 20px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--indigo-light);
+    }
+    td {
+      padding: 14px 20px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+    }
+    td:first-child { color: var(--text-primary); font-weight: 600; }
+    tr:hover td { background: rgba(99,102,241,0.04); }
+
+    /* =============================================
+       ERROR HANDLING
+    ============================================= */
+    .error-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .error-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+    .error-code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .error-code.rate  { color: var(--amber); }
+    .error-code.auth  { color: var(--rose); }
+    .error-code.net   { color: var(--violet); }
+    .error-code.valid { color: var(--cyan); }
+    .error-action { font-size: 13px; color: var(--text-secondary); }
+
+    /* =============================================
+       PROJECT STRUCTURE TREE
+    ============================================= */
+    .file-tree {
+      background: #0d0f1e;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 2;
+      overflow-x: auto;
+    }
+    .tree-dir   { color: var(--indigo-light); font-weight: 600; }
+    .tree-file  { color: var(--text-secondary); }
+    .tree-comment { color: var(--text-muted); }
+    .tree-indent-1 { padding-left: 24px; }
+    .tree-indent-2 { padding-left: 48px; }
+    .tree-indent-3 { padding-left: 72px; }
+    .tree-indent-4 { padding-left: 96px; }
+
+    /* =============================================
+       FOOTER
+    ============================================= */
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--bg-surface);
+      padding: 40px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    footer a { color: var(--indigo-light); text-decoration: none; }
+
+    /* =============================================
+       ANIMATIONS
+    ============================================= */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* =============================================
+       ARCH SVG DIAGRAM
+    ============================================= */
+    .arch-node {
+      fill: #141629;
+      stroke: rgba(99,102,241,0.45);
+      stroke-width: 1.5;
+      rx: 10;
+      ry: 10;
+    }
+    .arch-node-primary {
+      fill: rgba(99,102,241,0.15);
+      stroke: #6366f1;
+    }
+    .arch-node-ai {
+      fill: rgba(139,92,246,0.15);
+      stroke: #8b5cf6;
+    }
+    .arch-node-db {
+      fill: rgba(34,211,238,0.1);
+      stroke: #22d3ee;
+    }
+    .arch-node-platform {
+      fill: rgba(16,185,129,0.1);
+      stroke: #10b981;
+    }
+    .arch-text {
+      fill: #f1f5f9;
+      font-family: Inter, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+    .arch-sub {
+      fill: #94a3b8;
+      font-family: Inter, sans-serif;
+      font-size: 9px;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+    .arch-arrow {
+      stroke: rgba(99,102,241,0.5);
+      stroke-width: 1.5;
+      fill: none;
+      marker-end: url(#arrowhead);
+    }
+    .arch-arrow-ai {
+      stroke: rgba(139,92,246,0.55);
+    }
+    .arch-arrow-db {
+      stroke: rgba(34,211,238,0.45);
+    }
+    .arch-group-label {
+      fill: none;
+      stroke: rgba(99,102,241,0.2);
+      stroke-width: 1;
+      stroke-dasharray: 4 3;
+      rx: 14; ry: 14;
+    }
+    .arch-group-title {
+      fill: rgba(99,102,241,0.7);
+      font-family: Inter, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* =============================================
+       RESPONSIVE
+    ============================================= */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      section { padding: 64px 20px; }
+      .stat-strip { padding: 20px; flex-wrap: wrap; }
+      .stat-item { min-width: 100px; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 0; }
+      .stat-item:last-child { border-bottom: none; }
+      .hero { padding: 80px 20px 48px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav>
+  <div class="nav-logo">GTM Agent</div>
+  <ul class="nav-links">
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#stack">Stack</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#data-flows">Data Flows</a></li>
+    <li><a href="#database">Database</a></li>
+    <li><a href="#cron">Cron</a></li>
+    <li><a href="#phases">Phases</a></li>
+    <li><a href="#demo" style="color:var(--indigo-light)">Demo</a></li>
+  </ul>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="overview" style="max-width:100%; padding-top:120px;">
+  <div class="hero-bg">
+    <div class="hero-bg-orb hero-bg-orb-1"></div>
+    <div class="hero-bg-orb hero-bg-orb-2"></div>
+    <div class="hero-bg-orb hero-bg-orb-3"></div>
+  </div>
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    Autonomous Social Media Agent
+  </div>
+  <h1><span>GTM Agent</span></h1>
+  <p class="hero-sub">An autonomous social media management system that posts AI-generated content, monitors comments, and auto-replies across Twitter/X, Facebook, and Instagram — deployed entirely on Vercel serverless.</p>
+  <div class="hero-pills">
+    <span class="hero-pill"><strong>Next.js 15</strong> App Router</span>
+    <span class="hero-pill"><strong>Gemini AI</strong> Text Generation</span>
+    <span class="hero-pill"><strong>kie.ai</strong> Image Generation</span>
+    <span class="hero-pill"><strong>MongoDB</strong> Cloud</span>
+    <span class="hero-pill"><strong>Vercel</strong> Serverless + Cron</span>
+    <span class="hero-pill"><strong>TypeScript</strong></span>
+  </div>
+  <div class="hero-cta">
+    <a href="#architecture" class="btn-primary">Explore Architecture</a>
+    <a href="demo.html" class="btn-ghost" target="_blank">Live Demo</a>
+  </div>
+</section>
+
+<!-- ============ STAT STRIP ============ -->
+<div class="stat-strip">
+  <div class="stat-item">
+    <span class="stat-value">3</span>
+    <span class="stat-label">Platforms</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value">3</span>
+    <span class="stat-label">Cron Jobs</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value">5</span>
+    <span class="stat-label">DB Collections</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value">2</span>
+    <span class="stat-label">AI Services</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value">6</span>
+    <span class="stat-label">Build Phases</span>
+  </div>
+</div>
+
+<!-- ============ TECH STACK ============ -->
+<section id="stack">
+  <div class="reveal">
+    <div class="section-label">Technology</div>
+    <h2 class="section-title">Tech Stack</h2>
+    <p class="section-desc">Every technology selected for a specific job — from serverless infrastructure to AI-powered content generation.</p>
+  </div>
+  <div class="tech-grid reveal">
+    <div class="tech-card">
+      <div class="tech-icon" style="background:rgba(0,0,0,0.3);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M11.572 0c-.176 0-.31.001-.358.007a19.76 19.76 0 01-.364.033C7.443.346 4.25 2.185 2.228 5.012a11.875 11.875 0 00-2.119 5.243c-.096.659-.108.854-.108 1.747s.012 1.089.108 1.748c.652 4.506 3.86 8.292 8.209 9.695.779.25 1.6.422 2.534.525.363.04 1.935.04 2.299 0 1.611-.178 2.977-.577 4.323-1.264.207-.106.247-.134.219-.158-.02-.013-.9-1.193-1.955-2.62l-1.919-2.592-2.404-3.558a338.739 338.739 0 00-2.422-3.556c-.009-.002-.018 1.579-.023 3.51-.007 3.38-.01 3.515-.052 3.595a.426.426 0 01-.206.214c-.075.037-.14.044-.495.044H7.81l-.108-.068a.438.438 0 01-.157-.171l-.05-.106.006-4.703.007-4.705.072-.092a.645.645 0 01.174-.143c.096-.047.134-.051.54-.051.478 0 .558.018.682.154.035.038 1.337 1.999 2.895 4.361a10760.433 10760.433 0 004.735 7.17l1.9 2.879.096-.063a12.317 12.317 0 002.466-2.163 11.944 11.944 0 002.824-6.134c.096-.66.108-.854.108-1.748 0-.893-.012-1.088-.108-1.747-.652-4.506-3.859-8.292-8.208-9.695a12.597 12.597 0 00-2.499-.523A33.119 33.119 0 0011.573 0zm4.069 7.217c.347 0 .408.005.486.047a.473.473 0 01.237.277c.018.06.023 1.365.018 4.304l-.006 4.218-.744-1.14-.746-1.14v-3.066c0-1.982.01-3.097.023-3.15a.478.478 0 01.233-.296c.096-.05.13-.054.499-.054z" fill="white"/></svg>
+      </div>
+      <div class="tech-info">
+        <div class="tech-name">Next.js 15</div>
+        <div class="tech-role">Framework — App Router</div>
+      </div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon" style="background:rgba(0,122,204,0.15);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#3178c6"><path d="M1.125 0C.502 0 0 .502 0 1.125v21.75C0 23.498.502 24 1.125 24h21.75c.623 0 1.125-.502 1.125-1.125V1.125C24 .502 23.498 0 22.875 0zm17.363 9.75c.612 0 1.154.037 1.627.111a6.38 6.38 0 011.306.34v2.458a3.95 3.95 0 00-.643-.361 5.093 5.093 0 00-.717-.26 5.453 5.453 0 00-1.426-.2c-.3 0-.573.028-.819.086a2.1 2.1 0 00-.623.242c-.17.104-.3.229-.393.374a.888.888 0 00-.14.49c0 .196.053.373.156.529.104.156.252.304.443.444s.423.276.696.41c.273.135.582.274.926.416.47.197.892.407 1.266.628.374.222.695.473.963.753.268.279.472.598.614.957.142.359.214.776.214 1.253 0 .657-.125 1.21-.373 1.656a3.033 3.033 0 01-1.012 1.085 4.38 4.38 0 01-1.487.596c-.566.12-1.163.18-1.79.18a9.916 9.916 0 01-1.84-.164 5.544 5.544 0 01-1.512-.493v-2.63a5.033 5.033 0 003.237 1.2c.333 0 .624-.03.872-.09.249-.06.456-.144.623-.25.166-.108.29-.234.373-.38a1.023 1.023 0 00-.074-1.089 2.12 2.12 0 00-.537-.5 5.597 5.597 0 00-.807-.444 27.72 27.72 0 00-1.007-.436c-.918-.383-1.602-.852-2.053-1.405-.45-.553-.676-1.222-.676-2.005 0-.614.123-1.141.369-1.582.246-.441.58-.804 1.004-1.089a4.494 4.494 0 011.47-.629 7.536 7.536 0 011.77-.201zm-15.113.188h9.563v2.166H9.506v9.646H6.789v-9.646H3.375z"/></svg>
+      </div>
+      <div class="tech-info">
+        <div class="tech-name">TypeScript</div>
+        <div class="tech-role">Language — Type Safety</div>
+      </div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon" style="background:rgba(66,133,244,0.12);">
+        <svg width="26" height="26" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      </div>
+      <div class="tech-info">
+        <div class="tech-name">Google Gemini</div>
+        <div class="tech-role">AI Text Generation</div>
+      </div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon" style="background:rgba(99,102,241,0.15);">
+        <span style="font-size:20px;">🎨</span>
+      </div>
+      <div class="tech-info">
+        <div class="tech-name">kie.ai API</div>
+        <div class="tech-role">GPT-4o Image Generation</div>
+      </div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon" style="background:rgba(16,185,129,0.12);">
+        <svg width="26" height="26" viewBox="0 0 24 24"><path fill="#47A248" d="M17.193 9.555c-1.264-5.58-4.252-7.243-4.252-7.243c-.435-.232-.%20.%20.%20.%2012 0C3.1 0 0 3.1 0 6.93c0 3.83 3.1 6.93 6.93 6.93zm-.01 2.14c-3.82 0-6.93-3.1-6.93-6.93 0-.44.04-.88.12-1.3L.06 12.15c-.04.18-.06.38-.06.58 0 1.7 1.38 3.08 3.08 3.08.2 0 .4-.02.58-.06l5.85-1.06c-.42.08-.86.12-1.3.12zm11.3 5.74c0-2.82-3.27-5.1-7.29-5.1-4.04 0-7.3 2.28-7.3 5.1 0 2.83 3.26 5.12 7.3 5.12 4.02 0 7.3-2.3 7.3-5.12z"/></svg>
+      </div>
+      <div class="tech-info">
+        <div class="tech-name">MongoDB Cloud</div>
+        <div class="tech-role">Persistent Storage</div>
+      </div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon" style="background:rgba(0,0,0,0.3);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M24 22.525H0l12-21.05 12 21.05z"/></svg>
+      </div>
+      <div class="tech-info">
+        <div class="tech-name">Vercel</div>
+        <div class="tech-role">Serverless + Cron Jobs</div>
+      </div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon" style="background:rgba(29,161,242,0.12);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#1da1f2"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.713 5.874zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </div>
+      <div class="tech-info">
+        <div class="tech-name">Twitter API v2</div>
+        <div class="tech-role">OAuth 1.0a</div>
+      </div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon" style="background:rgba(24,119,242,0.12);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      </div>
+      <div class="tech-info">
+        <div class="tech-name">Meta Graph API</div>
+        <div class="tech-role">Facebook + Instagram</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE DIAGRAM ============ -->
+<section id="architecture" style="max-width:100%; background:var(--bg-surface); padding:96px 40px;">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">System Design</div>
+      <h2 class="section-title">System Architecture</h2>
+      <p class="section-desc">How all components connect — from Vercel serverless functions through AI services to social media platforms, with MongoDB as the central nervous system.</p>
+    </div>
+    <div class="arch-diagram-wrapper reveal">
+      <svg viewBox="0 0 960 580" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="rgba(99,102,241,0.6)"/>
+          </marker>
+          <marker id="arrowhead-ai" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="rgba(139,92,246,0.6)"/>
+          </marker>
+          <marker id="arrowhead-db" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="rgba(34,211,238,0.5)"/>
+          </marker>
+          <marker id="arrowhead-grn" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="rgba(16,185,129,0.6)"/>
+          </marker>
+        </defs>
+
+        <!-- VERCEL GROUP -->
+        <rect x="20" y="20" width="430" height="350" rx="14" class="arch-group-label"/>
+        <text x="36" y="40" class="arch-group-title">VERCEL — SERVERLESS</text>
+
+        <!-- Cron: Generate -->
+        <rect x="40" y="55" width="160" height="52" rx="8" class="arch-node arch-node-primary"/>
+        <text x="120" y="77" class="arch-text">Cron: /api/cron/generate</text>
+        <text x="120" y="93" class="arch-sub">Every 4 hours · AI Content Prefill</text>
+
+        <!-- Cron: Post -->
+        <rect x="40" y="125" width="160" height="52" rx="8" class="arch-node arch-node-primary"/>
+        <text x="120" y="147" class="arch-text">Cron: /api/cron/post</text>
+        <text x="120" y="163" class="arch-sub">Every 5 min · Publish Due Posts</text>
+
+        <!-- Cron: Monitor -->
+        <rect x="40" y="195" width="160" height="52" rx="8" class="arch-node arch-node-primary"/>
+        <text x="120" y="217" class="arch-text">Cron: /api/cron/monitor</text>
+        <text x="120" y="233" class="arch-sub">Every 3 min · Comment Replies</text>
+
+        <!-- Webhook FB -->
+        <rect x="40" y="265" width="155" height="45" rx="8" class="arch-node arch-node-primary"/>
+        <text x="117" y="284" class="arch-text">Webhook: /webhooks/facebook</text>
+        <text x="117" y="299" class="arch-sub">Real-time FB events · HMAC-SHA256</text>
+
+        <!-- Webhook IG -->
+        <rect x="210" y="265" width="155" height="45" rx="8" class="arch-node arch-node-primary"/>
+        <text x="287" y="284" class="arch-text">Webhook: /webhooks/instagram</text>
+        <text x="287" y="299" class="arch-sub">Real-time IG events</text>
+
+        <!-- Queue API -->
+        <rect x="210" y="125" width="155" height="45" rx="8" class="arch-node arch-node-primary"/>
+        <text x="287" y="144" class="arch-text">API: /api/queue</text>
+        <text x="287" y="159" class="arch-sub">Manual post queue · POST/GET</text>
+
+        <!-- Dashboard -->
+        <rect x="210" y="55" width="155" height="45" rx="8" class="arch-node arch-node-primary"/>
+        <text x="287" y="74" class="arch-text">Dashboard: /</text>
+        <text x="287" y="89" class="arch-sub">Status page · Next.js UI</text>
+
+        <!-- Health -->
+        <rect x="210" y="195" width="155" height="45" rx="8" class="arch-node arch-node-primary"/>
+        <text x="287" y="214" class="arch-text">Health: /api/health</text>
+        <text x="287" y="229" class="arch-sub">System health check</text>
+
+        <!-- AI GROUP -->
+        <rect x="480" y="20" width="200" height="160" rx="14" class="arch-group-label"/>
+        <text x="496" y="40" class="arch-group-title">AI SERVICES</text>
+
+        <rect x="496" y="55" width="168" height="52" rx="8" class="arch-node arch-node-ai"/>
+        <text x="580" y="75" class="arch-text">Google Gemini</text>
+        <text x="580" y="91" class="arch-sub">gemini-2.0-flash · Text</text>
+
+        <rect x="496" y="120" width="168" height="48" rx="8" class="arch-node arch-node-ai"/>
+        <text x="580" y="140" class="arch-text">kie.ai API</text>
+        <text x="580" y="156" class="arch-sub">GPT-4o Images · Async poll</text>
+
+        <!-- DB GROUP -->
+        <rect x="480" y="200" width="200" height="235" rx="14" class="arch-group-label"/>
+        <text x="496" y="220" class="arch-group-title">MONGODB CLOUD</text>
+
+        <rect x="496" y="232" width="168" height="34" rx="6" class="arch-node arch-node-db"/>
+        <text x="580" y="251" class="arch-text">queued_posts</text>
+
+        <rect x="496" y="275" width="168" height="34" rx="6" class="arch-node arch-node-db"/>
+        <text x="580" y="294" class="arch-text">published_posts</text>
+
+        <rect x="496" y="318" width="168" height="34" rx="6" class="arch-node arch-node-db"/>
+        <text x="580" y="337" class="arch-text">comments</text>
+
+        <rect x="496" y="361" width="80" height="34" rx="6" class="arch-node arch-node-db"/>
+        <text x="536" y="380" class="arch-text">rate_limits</text>
+
+        <rect x="584" y="361" width="80" height="34" rx="6" class="arch-node arch-node-db"/>
+        <text x="624" y="380" class="arch-text">poll_cursors</text>
+
+        <!-- PLATFORMS GROUP -->
+        <rect x="720" y="20" width="220" height="350" rx="14" class="arch-group-label"/>
+        <text x="736" y="40" class="arch-group-title">SOCIAL PLATFORMS</text>
+
+        <rect x="736" y="55" width="188" height="60" rx="8" class="arch-node arch-node-platform"/>
+        <text x="830" y="80" class="arch-text" style="font-size:13px">Twitter / X</text>
+        <text x="830" y="100" class="arch-sub">OAuth 1.0a · twitter-api-v2</text>
+
+        <rect x="736" y="135" width="188" height="60" rx="8" class="arch-node arch-node-platform"/>
+        <text x="830" y="160" class="arch-text" style="font-size:13px">Facebook Pages</text>
+        <text x="830" y="178" class="arch-sub">Meta Graph API v22.0</text>
+
+        <rect x="736" y="215" width="188" height="60" rx="8" class="arch-node arch-node-platform"/>
+        <text x="830" y="240" class="arch-text" style="font-size:13px">Instagram Business</text>
+        <text x="830" y="258" class="arch-sub">Two-step publish · Webhooks</text>
+
+        <!-- ===== ARROWS ===== -->
+        <!-- Generate → Gemini -->
+        <path d="M200 81 L496 81" class="arch-arrow arch-arrow-ai" stroke="rgba(139,92,246,0.55)" marker-end="url(#arrowhead-ai)"/>
+
+        <!-- Generate → kie.ai -->
+        <path d="M200 95 Q360 145 496 145" class="arch-arrow arch-arrow-ai" stroke="rgba(139,92,246,0.4)" marker-end="url(#arrowhead-ai)"/>
+
+        <!-- Generate → queued_posts -->
+        <path d="M200 105 Q350 200 496 249" class="arch-arrow arch-arrow-db" stroke="rgba(34,211,238,0.45)" marker-end="url(#arrowhead-db)"/>
+
+        <!-- Post Cron → queued_posts -->
+        <path d="M200 151 Q350 200 496 249" class="arch-arrow arch-arrow-db" stroke="rgba(34,211,238,0.35)" marker-end="url(#arrowhead-db)"/>
+
+        <!-- Post Cron → Twitter -->
+        <path d="M200 147 Q460 80 736 85" class="arch-arrow" stroke="rgba(99,102,241,0.45)" marker-end="url(#arrowhead)"/>
+
+        <!-- Post Cron → Facebook -->
+        <path d="M200 151 Q460 160 736 165" class="arch-arrow" stroke="rgba(99,102,241,0.4)" marker-end="url(#arrowhead)"/>
+
+        <!-- Post Cron → Instagram -->
+        <path d="M200 160 Q460 220 736 245" class="arch-arrow" stroke="rgba(99,102,241,0.35)" marker-end="url(#arrowhead)"/>
+
+        <!-- Monitor → Platforms -->
+        <path d="M200 221 Q460 165 736 165" class="arch-arrow" stroke="rgba(99,102,241,0.3)" marker-end="url(#arrowhead)" stroke-dasharray="5,3"/>
+
+        <!-- Monitor → Gemini (reply gen) -->
+        <path d="M200 218 Q400 100 496 90" class="arch-arrow arch-arrow-ai" stroke="rgba(139,92,246,0.35)" stroke-dasharray="4,3" marker-end="url(#arrowhead-ai)"/>
+
+        <!-- FB Webhook → Facebook (bidirectional) -->
+        <path d="M196 287 Q460 270 736 165" class="arch-arrow" stroke="rgba(99,102,241,0.3)" stroke-dasharray="3,3" marker-end="url(#arrowhead)"/>
+
+        <!-- IG Webhook → Instagram -->
+        <path d="M365 287 Q540 260 736 245" class="arch-arrow" stroke="rgba(99,102,241,0.3)" stroke-dasharray="3,3" marker-end="url(#arrowhead)"/>
+
+        <!-- Platform → published_posts -->
+        <path d="M736 165 Q660 230 664 292" class="arch-arrow arch-arrow-db" stroke="rgba(34,211,238,0.3)" marker-end="url(#arrowhead-db)"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DATA FLOWS ============ -->
+<section id="data-flows">
+  <div class="reveal">
+    <div class="section-label">Data Flows</div>
+    <h2 class="section-title">Pipeline Walkthroughs</h2>
+    <p class="section-desc">Three distinct flows drive the agent — content generation, post publishing, and real-time comment monitoring and reply.</p>
+  </div>
+  <div class="flow-container reveal">
+
+    <!-- Posting Pipeline -->
+    <div class="flow-card">
+      <div class="flow-card-title">
+        <div class="flow-card-icon">📤</div>
+        Content Generation Pipeline
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">1</div>
+        <div class="flow-step-text"><strong>Cron fires every 4 hours</strong> — triggers content prefill for upcoming scheduled slots</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>Gemini API</strong> generates post text with brand voice, topics, platform-specific hashtags</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>kie.ai API</strong> generates matching image — returns <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">taskId</code>, polls until <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">successFlag:1</code></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>MongoDB insert</strong> — queued_posts record with <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">status: 'pending'</code>, scheduled time, image URL</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>Post cron (5 min)</strong> finds due posts, checks rate_limits token bucket, publishes to platforms</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">6</div>
+        <div class="flow-step-text"><strong>Record moved</strong> from queued_posts to published_posts with platformPostId</div>
+      </div>
+    </div>
+
+    <!-- Comment Monitoring -->
+    <div class="flow-card">
+      <div class="flow-card-title">
+        <div class="flow-card-icon">💬</div>
+        Comment Monitor + Auto-Reply
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">1</div>
+        <div class="flow-step-text"><strong>Cron fires every 3 min</strong> — fetches published posts from last 7 days</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>poll_cursors</strong> give last-checked timestamps per post to avoid duplicates</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>Platform adapters</strong> fetch new comments since last cursor for each published post</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>Deduplication check</strong> — comments already in MongoDB are skipped gracefully</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>Gemini generates reply</strong> with full context: original post + incoming comment + 5 prior messages</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">6</div>
+        <div class="flow-step-text"><strong>Reply posted</strong> via platform adapter, comment marked <code style="font-family:var(--font-mono);font-size:11px;color:var(--emerald)">hasBeenReplied: true</code></div>
+      </div>
+    </div>
+
+    <!-- Webhook Flow -->
+    <div class="flow-card">
+      <div class="flow-card-title">
+        <div class="flow-card-icon">⚡</div>
+        Real-Time Webhook Flow
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">1</div>
+        <div class="flow-step-text"><strong>User comments</strong> on Facebook/Instagram post — Meta pushes event to webhook URL</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>HMAC-SHA256 verification</strong> — <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">X-Hub-Signature-256</code> header validated against APP_SECRET</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>Idempotency check</strong> — comment looked up in MongoDB; skip if already processed</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>Original post fetched</strong> from published_posts for full context</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step-text"><strong>Gemini generates reply</strong> — contextual AI response in brand voice</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">6</div>
+        <div class="flow-step-text"><strong>Reply posted + 200 OK returned</strong> to Meta within 20s timeout window</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ PLATFORMS ============ -->
+<section id="platforms" style="max-width:100%; background:var(--bg-surface); padding:96px 40px;">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Integrations</div>
+      <h2 class="section-title">Platform Adapters</h2>
+      <p class="section-desc">Each platform implements the same abstract <code style="font-family:var(--font-mono);color:var(--indigo-light)">PlatformAdapter</code> interface — publish, fetch comments, reply, verify credentials.</p>
+    </div>
+    <div class="platform-grid reveal">
+      <div class="platform-card">
+        <div class="platform-header">
+          <div class="platform-logo" style="background:rgba(0,0,0,0.3);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.713 5.874zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </div>
+          <div>
+            <div class="platform-name">Twitter / X</div>
+            <div class="platform-sub">twitter-api-v2 package</div>
+          </div>
+        </div>
+        <div class="platform-prop"><span class="platform-prop-key">Post method</span><span class="platform-prop-val">POST /2/tweets</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Comment fetch</span><span class="platform-prop-val">Poll search/recent</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Reply method</span><span class="platform-prop-val">in_reply_to_tweet_id</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Auth</span><span class="platform-prop-val">OAuth 1.0a</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Post limit</span><span class="platform-prop-val">500/mo free · 50K/mo paid</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Webhooks</span><span class="platform-prop-val">Polling only</span></div>
+      </div>
+      <div class="platform-card">
+        <div class="platform-header">
+          <div class="platform-logo" style="background:rgba(24,119,242,0.15);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </div>
+          <div>
+            <div class="platform-name">Facebook Pages</div>
+            <div class="platform-sub">Meta Graph API v22.0</div>
+          </div>
+        </div>
+        <div class="platform-prop"><span class="platform-prop-key">Post method</span><span class="platform-prop-val">POST /{page-id}/feed</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Comment fetch</span><span class="platform-prop-val">GET /{post-id}/comments</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Reply method</span><span class="platform-prop-val">POST /{comment-id}/comments</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Auth</span><span class="platform-prop-val">Page Access Token</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Post limit</span><span class="platform-prop-val">No hard limit</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Webhooks</span><span class="platform-prop-val">Real-time + polling fallback</span></div>
+      </div>
+      <div class="platform-card">
+        <div class="platform-header">
+          <div class="platform-logo" style="background:linear-gradient(135deg,rgba(225,48,108,0.15),rgba(193,53,132,0.15),rgba(88,81,219,0.15));">
+            <svg width="26" height="26" viewBox="0 0 24 24"><path fill="url(#igGrad)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/><defs><linearGradient id="igGrad" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#f09433"/><stop offset="25%" style="stop-color:#e6683c"/><stop offset="50%" style="stop-color:#dc2743"/><stop offset="75%" style="stop-color:#cc2366"/><stop offset="100%" style="stop-color:#bc1888"/></linearGradient></defs></svg>
+          </div>
+          <div>
+            <div class="platform-name">Instagram Business</div>
+            <div class="platform-sub">Meta Graph API v22.0</div>
+          </div>
+        </div>
+        <div class="platform-prop"><span class="platform-prop-key">Post method</span><span class="platform-prop-val">Two-step: media + publish</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Comment fetch</span><span class="platform-prop-val">GET /{media-id}/comments</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Reply method</span><span class="platform-prop-val">POST /{comment-id}/replies</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Auth</span><span class="platform-prop-val">Page Access Token</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Post limit</span><span class="platform-prop-val">25 API posts/24h</span></div>
+        <div class="platform-prop"><span class="platform-prop-key">Webhooks</span><span class="platform-prop-val">Real-time + polling fallback</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DATABASE ============ -->
+<section id="database">
+  <div class="reveal">
+    <div class="section-label">Persistence</div>
+    <h2 class="section-title">MongoDB Collections</h2>
+    <p class="section-desc">Five collections form the backbone of the system. Carefully designed indexes ensure sub-millisecond lookups even under serverless cold-start conditions.</p>
+  </div>
+  <div class="db-grid reveal">
+    <div class="db-card">
+      <div class="db-card-header"><span class="db-collection-icon">📋</span><span class="db-collection-name">queued_posts</span></div>
+      <div class="db-card-body">
+        <div class="db-field"><span class="db-field-name">_id</span><span class="db-field-type">string <span class="db-field-badge badge-pk">PK</span></span></div>
+        <div class="db-field"><span class="db-field-name">platform</span><span class="db-field-type">Platform</span></div>
+        <div class="db-field"><span class="db-field-name">content</span><span class="db-field-type">string</span></div>
+        <div class="db-field"><span class="db-field-name">mediaUrl</span><span class="db-field-type">string?</span></div>
+        <div class="db-field"><span class="db-field-name">scheduledAt</span><span class="db-field-type">Date</span></div>
+        <div class="db-field"><span class="db-field-name">status</span><span class="db-field-type">pending|published|failed</span></div>
+        <div class="db-field"><span class="db-field-name">retryCount</span><span class="db-field-type">int</span></div>
+        <div class="db-field"><span class="db-field-name">sourceType</span><span class="db-field-type">ai_generated|manual</span></div>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(99,102,241,0.1); font-size:11px; color:var(--indigo); font-family:var(--font-mono);">idx: {status, scheduledAt}</div>
+      </div>
+    </div>
+    <div class="db-card">
+      <div class="db-card-header"><span class="db-collection-icon">✅</span><span class="db-collection-name">published_posts</span></div>
+      <div class="db-card-body">
+        <div class="db-field"><span class="db-field-name">_id</span><span class="db-field-type">string <span class="db-field-badge badge-pk">PK</span></span></div>
+        <div class="db-field"><span class="db-field-name">platformPostId</span><span class="db-field-type">string</span></div>
+        <div class="db-field"><span class="db-field-name">platform</span><span class="db-field-type">Platform</span></div>
+        <div class="db-field"><span class="db-field-name">content</span><span class="db-field-type">string</span></div>
+        <div class="db-field"><span class="db-field-name">mediaUrl</span><span class="db-field-type">string?</span></div>
+        <div class="db-field"><span class="db-field-name">publishedAt</span><span class="db-field-type">Date</span></div>
+        <div class="db-field"><span class="db-field-name">queuedPostId</span><span class="db-field-type">string <span class="db-field-badge badge-fk">FK</span></span></div>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(99,102,241,0.1); font-size:11px; color:var(--indigo); font-family:var(--font-mono);">idx: {platform, publishedAt}</div>
+      </div>
+    </div>
+    <div class="db-card">
+      <div class="db-card-header"><span class="db-collection-icon">💬</span><span class="db-collection-name">comments</span></div>
+      <div class="db-card-body">
+        <div class="db-field"><span class="db-field-name">_id</span><span class="db-field-type">string <span class="db-field-badge badge-pk">PK</span></span></div>
+        <div class="db-field"><span class="db-field-name">platformCommentId</span><span class="db-field-type">string <span class="db-field-badge badge-uk">UK</span></span></div>
+        <div class="db-field"><span class="db-field-name">platformPostId</span><span class="db-field-type">string</span></div>
+        <div class="db-field"><span class="db-field-name">platform</span><span class="db-field-type">Platform</span></div>
+        <div class="db-field"><span class="db-field-name">authorName</span><span class="db-field-type">string?</span></div>
+        <div class="db-field"><span class="db-field-name">text</span><span class="db-field-type">string</span></div>
+        <div class="db-field"><span class="db-field-name">hasBeenReplied</span><span class="db-field-type">boolean</span></div>
+        <div class="db-field"><span class="db-field-name">replyText</span><span class="db-field-type">string?</span></div>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(99,102,241,0.1); font-size:11px; color:var(--indigo); font-family:var(--font-mono);">idx: {platformCommentId, platform} unique</div>
+      </div>
+    </div>
+    <div class="db-card">
+      <div class="db-card-header"><span class="db-collection-icon">⚖️</span><span class="db-collection-name">rate_limits</span></div>
+      <div class="db-card-body">
+        <div class="db-field"><span class="db-field-name">_id</span><span class="db-field-type">string <span class="db-field-badge badge-pk">PK</span></span></div>
+        <div class="db-field"><span class="db-field-name">platform</span><span class="db-field-type">Platform <span class="db-field-badge badge-uk">UK</span></span></div>
+        <div class="db-field"><span class="db-field-name">tokens</span><span class="db-field-type">int</span></div>
+        <div class="db-field"><span class="db-field-name">capacity</span><span class="db-field-type">int</span></div>
+        <div class="db-field"><span class="db-field-name">lastRefill</span><span class="db-field-type">Date</span></div>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(99,102,241,0.1); font-size:11px; color:var(--text-muted);">Token bucket — survives cold starts</div>
+      </div>
+    </div>
+    <div class="db-card">
+      <div class="db-card-header"><span class="db-collection-icon">🔖</span><span class="db-collection-name">poll_cursors</span></div>
+      <div class="db-card-body">
+        <div class="db-field"><span class="db-field-name">_id</span><span class="db-field-type">string <span class="db-field-badge badge-pk">PK</span></span></div>
+        <div class="db-field"><span class="db-field-name">platform</span><span class="db-field-type">Platform</span></div>
+        <div class="db-field"><span class="db-field-name">platformPostId</span><span class="db-field-type">string</span></div>
+        <div class="db-field"><span class="db-field-name">lastCheckedAt</span><span class="db-field-type">Date</span></div>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(99,102,241,0.1); font-size:11px; color:var(--indigo); font-family:var(--font-mono);">idx: {platform, platformPostId} unique</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CRON JOBS ============ -->
+<section id="cron" style="max-width:100%; background:var(--bg-surface); padding:96px 40px;">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Scheduling</div>
+      <h2 class="section-title">Vercel Cron Jobs</h2>
+      <p class="section-desc">Three cron jobs run the entire system autonomously. Secured with a CRON_SECRET header validated on every invocation.</p>
+    </div>
+    <div class="cron-cards reveal">
+      <div class="cron-card post-cron">
+        <div class="cron-schedule">*/5 * * * *</div>
+        <div class="cron-name">Post Scheduler</div>
+        <div class="cron-desc">Every 5 minutes — checks for queued posts with <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">scheduledAt &lt;= now</code>, validates rate limits, and publishes to Twitter/X, Facebook, and Instagram.</div>
+      </div>
+      <div class="cron-card monitor-cron">
+        <div class="cron-schedule">*/3 * * * *</div>
+        <div class="cron-name">Comment Monitor</div>
+        <div class="cron-desc">Every 3 minutes — scans published posts from the last 7 days, fetches new comments via platform adapters, generates AI replies via Gemini, and posts them back.</div>
+      </div>
+      <div class="cron-card gen-cron">
+        <div class="cron-schedule">0 */4 * * *</div>
+        <div class="cron-name">Content Generator</div>
+        <div class="cron-desc">Every 4 hours — calls Gemini for platform-specific post copy, then kie.ai for a matching image. Stores generated content in queued_posts ready for the post scheduler.</div>
+      </div>
+    </div>
+
+    <!-- Rate Limits Table -->
+    <div class="reveal" style="margin-top:48px;">
+      <div class="section-label" style="margin-bottom:16px;">Rate Limits and Constraints</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Post Limit</th>
+              <th>Comment Monitoring</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Twitter / X</td>
+              <td>Free: ~500/mo · Basic ($100): 50K/mo</td>
+              <td>Polling only (no webhooks)</td>
+              <td>Search limited to last 7 days</td>
+            </tr>
+            <tr>
+              <td>Facebook</td>
+              <td>No hard limit (BUC guidelines)</td>
+              <td>Webhooks + polling fallback</td>
+              <td>Page tokens expire in 60 days</td>
+            </tr>
+            <tr>
+              <td>Instagram</td>
+              <td>25 API posts per 24h</td>
+              <td>Webhooks + polling fallback</td>
+              <td>Requires image/video — no text-only</td>
+            </tr>
+            <tr>
+              <td>kie.ai</td>
+              <td>Pay-per-call (~$0.03/image)</td>
+              <td>N/A</td>
+              <td>Images expire in 14 days</td>
+            </tr>
+            <tr>
+              <td>Gemini</td>
+              <td>Per-token pricing</td>
+              <td>N/A</td>
+              <td>Rate limits vary by model</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ERROR HANDLING ============ -->
+<section id="errors">
+  <div class="reveal">
+    <div class="section-label">Reliability</div>
+    <h2 class="section-title">Error Handling Strategy</h2>
+    <p class="section-desc">Every API call is wrapped in exponential backoff. Errors are categorized and handled deterministically — rate limits wait, auth errors skip, network errors retry.</p>
+  </div>
+  <div class="error-grid reveal">
+    <div class="error-card">
+      <div class="error-code rate">429 Rate Limit</div>
+      <div class="error-action">Exponential backoff — base 2s, factor 2x, max 3 attempts with jitter. If max retries exceeded, mark post as failed and alert.</div>
+    </div>
+    <div class="error-card">
+      <div class="error-code auth">401 / 403 Auth Error</div>
+      <div class="error-action">Log error and skip the platform entirely for this execution cycle. Does not block other platforms.</div>
+    </div>
+    <div class="error-card">
+      <div class="error-code net">Network Error</div>
+      <div class="error-action">Retry up to 3 times with exponential backoff. If all retries exhausted, mark the post as failed in MongoDB.</div>
+    </div>
+    <div class="error-code valid" style="margin:0;">
+      <div class="error-card" style="margin:0;">
+        <div class="error-code valid">400 Validation Error</div>
+        <div class="error-action">Log immediately and mark post as failed. No retries — the request is structurally wrong.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal" style="margin-top:32px;">
+    <div class="code-block">
+<span class="co">// src/lib/utils/retry.ts — Exponential backoff with jitter</span>
+<span class="kw">async function</span> <span class="fn">withRetry</span>&lt;<span class="ty">T</span>&gt;(
+  <span class="pl">fn</span>: () =&gt; <span class="ty">Promise</span>&lt;<span class="ty">T</span>&gt;,
+  <span class="pl">opts</span> = { maxAttempts: <span class="nu">3</span>, baseDelayMs: <span class="nu">2000</span>, factor: <span class="nu">2</span> }
+): <span class="ty">Promise</span>&lt;<span class="ty">T</span>&gt; {
+  <span class="kw">for</span> (<span class="kw">let</span> attempt = <span class="nu">1</span>; attempt &lt;= opts.maxAttempts; attempt++) {
+    <span class="kw">try</span> { <span class="kw">return await</span> fn(); }
+    <span class="kw">catch</span> (err) {
+      <span class="kw">if</span> (attempt === opts.maxAttempts) <span class="kw">throw</span> err;
+      <span class="kw">const</span> delay = opts.baseDelayMs * (opts.factor ** (attempt - <span class="nu">1</span>))
+                   + Math.random() * <span class="nu">1000</span>; <span class="co">// jitter</span>
+      <span class="kw">await</span> sleep(delay);
+    }
+  }
+}
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECURITY ============ -->
+<section id="security" style="max-width:100%; background:var(--bg-surface); padding:96px 40px;">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Security</div>
+      <h2 class="section-title">Security Architecture</h2>
+      <p class="section-desc">Defense-in-depth across webhook verification, cron authentication, secrets management, and database access controls.</p>
+    </div>
+    <div class="security-grid reveal">
+      <div class="security-card">
+        <div class="security-icon">🔐</div>
+        <div>
+          <div class="security-title">Webhook Verification</div>
+          <div class="security-detail">HMAC-SHA256 signature check on every Meta webhook event using <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">X-Hub-Signature-256</code> header.</div>
+        </div>
+      </div>
+      <div class="security-card">
+        <div class="security-icon">🔑</div>
+        <div>
+          <div class="security-title">Cron Authentication</div>
+          <div class="security-detail">All <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">/api/cron/*</code> endpoints validate the Vercel <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">CRON_SECRET</code> header before executing.</div>
+        </div>
+      </div>
+      <div class="security-card">
+        <div class="security-icon">🌿</div>
+        <div>
+          <div class="security-title">Environment Secrets</div>
+          <div class="security-detail">All API keys stored in <code style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">.env.local</code> (gitignored). Zero credentials in source code.</div>
+        </div>
+      </div>
+      <div class="security-card">
+        <div class="security-icon">🗄️</div>
+        <div>
+          <div class="security-title">MongoDB Security</div>
+          <div class="security-detail">Authenticated connection string with optional IP whitelist. Singleton client pattern prevents connection exhaustion.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROJECT STRUCTURE ============ -->
+<section id="structure">
+  <div class="reveal">
+    <div class="section-label">Codebase</div>
+    <h2 class="section-title">Project Structure</h2>
+    <p class="section-desc">Clean separation of concerns — platforms, AI, services, DB repositories, and API routes each live in their own domain layer.</p>
+  </div>
+  <div class="file-tree reveal">
+<div><span class="tree-dir">GTM_Agent/</span></div>
+<div class="tree-indent-1"><span class="tree-file">package.json &nbsp; tsconfig.json &nbsp; next.config.ts</span></div>
+<div class="tree-indent-1"><span class="tree-file">vercel.json</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;# Cron job schedules</span></div>
+<div class="tree-indent-1"><span class="tree-file">config.json</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Brand voice, topics, schedule</span></div>
+<div class="tree-indent-1"><span class="tree-file">.env.local</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Secrets (gitignored)</span></div>
+<div class="tree-indent-1"><span class="tree-dir">src/app/</span></div>
+<div class="tree-indent-2"><span class="tree-file">page.tsx</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Status dashboard UI</span></div>
+<div class="tree-indent-2"><span class="tree-dir">api/cron/</span></div>
+<div class="tree-indent-3"><span class="tree-file">post/route.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;# Publish due posts</span></div>
+<div class="tree-indent-3"><span class="tree-file">monitor/route.ts</span> <span class="tree-comment">&nbsp;# Poll comments + auto-reply</span></div>
+<div class="tree-indent-3"><span class="tree-file">generate/route.ts</span> <span class="tree-comment"># AI content prefill</span></div>
+<div class="tree-indent-2"><span class="tree-dir">api/webhooks/</span></div>
+<div class="tree-indent-3"><span class="tree-file">facebook/route.ts</span> <span class="tree-comment">&nbsp;# FB real-time events</span></div>
+<div class="tree-indent-3"><span class="tree-file">instagram/route.ts</span> <span class="tree-comment"># IG real-time events</span></div>
+<div class="tree-indent-1"><span class="tree-dir">src/lib/</span></div>
+<div class="tree-indent-2"><span class="tree-file">types.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# All shared TypeScript interfaces</span></div>
+<div class="tree-indent-2"><span class="tree-dir">platforms/</span></div>
+<div class="tree-indent-3"><span class="tree-file">base.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Abstract PlatformAdapter</span></div>
+<div class="tree-indent-3"><span class="tree-file">twitter.ts &nbsp; facebook.ts &nbsp; instagram.ts</span></div>
+<div class="tree-indent-2"><span class="tree-dir">ai/</span></div>
+<div class="tree-indent-3"><span class="tree-file">content-generator.ts</span> <span class="tree-comment">&nbsp;# Gemini text</span></div>
+<div class="tree-indent-3"><span class="tree-file">image-generator.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;# kie.ai images</span></div>
+<div class="tree-indent-2"><span class="tree-dir">services/</span></div>
+<div class="tree-indent-3"><span class="tree-file">post-scheduler.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;# Fetch + publish</span></div>
+<div class="tree-indent-3"><span class="tree-file">comment-monitor.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;# Poll platforms</span></div>
+<div class="tree-indent-3"><span class="tree-file">comment-responder.ts</span> <span class="tree-comment">&nbsp;# AI reply generation</span></div>
+<div class="tree-indent-3"><span class="tree-file">content-prefill.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;# Queue upcoming slots</span></div>
+<div class="tree-indent-2"><span class="tree-dir">db/</span></div>
+<div class="tree-indent-3"><span class="tree-file">client.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# MongoDB singleton</span></div>
+<div class="tree-indent-3"><span class="tree-dir">repositories/</span></div>
+<div class="tree-indent-4"><span class="tree-file">posts.ts &nbsp; comments.ts &nbsp; config.ts</span></div>
+<div class="tree-indent-2"><span class="tree-dir">utils/</span></div>
+<div class="tree-indent-3"><span class="tree-file">retry.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Exponential backoff + jitter</span></div>
+<div class="tree-indent-3"><span class="tree-file">rate-limiter.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;# Token bucket (MongoDB-backed)</span></div>
+<div class="tree-indent-3"><span class="tree-file">errors.ts</span> <span class="tree-comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Custom error classes</span></div>
+  </div>
+</section>
+
+<!-- ============ IMPLEMENTATION PHASES ============ -->
+<section id="phases" style="max-width:100%; background:var(--bg-surface); padding:96px 40px;">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Roadmap</div>
+      <h2 class="section-title">Implementation Phases</h2>
+      <p class="section-desc">Six focused phases from zero to production — each building on the last, with clear, deliverable outcomes at every stage.</p>
+    </div>
+    <div class="timeline reveal">
+      <div class="timeline-item">
+        <div class="timeline-dot done"></div>
+        <div class="timeline-card">
+          <div class="timeline-phase">Phase 1</div>
+          <div class="timeline-title">Project Foundation</div>
+          <div class="timeline-items">
+            <span class="timeline-tag">Next.js 15 init</span>
+            <span class="timeline-tag">TypeScript config</span>
+            <span class="timeline-tag">Types + interfaces</span>
+            <span class="timeline-tag">MongoDB connection</span>
+            <span class="timeline-tag">Collections + indexes</span>
+            <span class="timeline-tag">Retry utility</span>
+            <span class="timeline-tag">Rate limiter</span>
+            <span class="timeline-tag">Error classes</span>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-card">
+          <div class="timeline-phase">Phase 2</div>
+          <div class="timeline-title">Platform Adapters</div>
+          <div class="timeline-items">
+            <span class="timeline-tag">Abstract PlatformAdapter</span>
+            <span class="timeline-tag">Twitter/X adapter</span>
+            <span class="timeline-tag">Facebook adapter</span>
+            <span class="timeline-tag">Instagram adapter</span>
+            <span class="timeline-tag">Credential verification</span>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-card">
+          <div class="timeline-phase">Phase 3</div>
+          <div class="timeline-title">AI Integration</div>
+          <div class="timeline-items">
+            <span class="timeline-tag">Gemini content generator</span>
+            <span class="timeline-tag">System + user prompts</span>
+            <span class="timeline-tag">kie.ai image generator</span>
+            <span class="timeline-tag">Async polling loop</span>
+            <span class="timeline-tag">Reply with context</span>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-card">
+          <div class="timeline-phase">Phase 4</div>
+          <div class="timeline-title">Core Services</div>
+          <div class="timeline-items">
+            <span class="timeline-tag">Post scheduler service</span>
+            <span class="timeline-tag">Comment monitor service</span>
+            <span class="timeline-tag">Comment responder service</span>
+            <span class="timeline-tag">Content prefill service</span>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-card">
+          <div class="timeline-phase">Phase 5</div>
+          <div class="timeline-title">API Routes</div>
+          <div class="timeline-items">
+            <span class="timeline-tag">Cron: /post</span>
+            <span class="timeline-tag">Cron: /monitor</span>
+            <span class="timeline-tag">Cron: /generate</span>
+            <span class="timeline-tag">Webhook: Facebook</span>
+            <span class="timeline-tag">Webhook: Instagram</span>
+            <span class="timeline-tag">Manual queue API</span>
+            <span class="timeline-tag">Health check</span>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-card">
+          <div class="timeline-phase">Phase 6</div>
+          <div class="timeline-title">Dashboard and Deploy</div>
+          <div class="timeline-items">
+            <span class="timeline-tag">Status dashboard UI</span>
+            <span class="timeline-tag">Vercel deployment</span>
+            <span class="timeline-tag">Cron configuration</span>
+            <span class="timeline-tag">Meta webhook registration</span>
+            <span class="timeline-tag">Environment variables</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA / DEMO LINK ============ -->
+<section id="demo" style="text-align:center;">
+  <div class="reveal">
+    <div class="section-label">Interactive Prototype</div>
+    <h2 class="section-title">See It In Action</h2>
+    <p class="section-desc" style="margin:0 auto 36px;">Explore the interactive dashboard demo — view the post queue, comment monitor, and content generator as if the system were live.</p>
+    <a href="demo.html" class="btn-primary" style="font-size:16px; padding:16px 40px;" target="_blank">Open Interactive Demo</a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <p>GTM Agent — Architecture Document &nbsp;|&nbsp; Built with Next.js 15, Vercel, MongoDB, Gemini AI &amp; kie.ai &nbsp;|&nbsp; <a href="ARCHITECTURE.md">View Source Plan</a></p>
+</footer>
+
+<script>
+  // ============ Intersection Observer for reveal animations ============
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ============ Nav active state ============
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+
+  const navObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        navLinks.forEach(link => {
+          link.classList.remove('active');
+          if (link.getAttribute('href') === '#' + id) {
+            link.classList.add('active');
+          }
+        });
+      }
+    });
+  }, { threshold: 0.4 });
+
+  document.querySelectorAll('section[id]').forEach(s => navObserver.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "brand": {
+    "name": "Your Brand",
+    "voice": "professional yet approachable, with a touch of humor",
+    "topics": [
+      "industry trends",
+      "product updates",
+      "customer success stories",
+      "tips and best practices"
+    ],
+    "hashtags": {
+      "default": ["#YourBrand"],
+      "twitter": ["#Tech", "#Innovation"],
+      "instagram": ["#Business", "#Growth", "#Motivation"]
+    },
+    "avoid": ["politics", "religion", "competitor bashing"]
+  },
+  "platforms": {
+    "twitter": {
+      "enabled": true,
+      "maxPostsPerDay": 10,
+      "characterLimit": 280
+    },
+    "facebook": {
+      "enabled": true,
+      "maxPostsPerDay": 5
+    },
+    "instagram": {
+      "enabled": true,
+      "maxPostsPerDay": 5
+    }
+  },
+  "scheduling": {
+    "postTimesUTC": ["09:00", "13:00", "18:00"],
+    "timezone": "America/Los_Angeles"
+  },
+  "ai": {
+    "model": "gemini-2.0-flash",
+    "temperature": 0.7,
+    "replyContextDepth": 5,
+    "skipReplyPatterns": ["^spam", "unsubscribe", "buy now"]
+  }
+}

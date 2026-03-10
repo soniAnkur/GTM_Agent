@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GTM Agent — Live Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* =============================================
+       DESIGN SYSTEM
+    ============================================= */
+    :root {
+      --bg:          #0a0b14;
+      --bg-nav:      rgba(10,11,20,0.92);
+      --bg-surface:  #0f1022;
+      --bg-card:     #141629;
+      --bg-hover:    #1a1e35;
+      --border:      rgba(99,102,241,0.16);
+      --border-bright: rgba(99,102,241,0.4);
+
+      --indigo:      #6366f1;
+      --indigo-l:    #818cf8;
+      --violet:      #8b5cf6;
+      --cyan:        #22d3ee;
+      --emerald:     #10b981;
+      --rose:        #f43f5e;
+      --amber:       #f59e0b;
+      --sky:         #38bdf8;
+
+      --text:        #f1f5f9;
+      --text-2:      #94a3b8;
+      --text-3:      #475569;
+
+      --grad:        linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4);
+      --font-mono:   'JetBrains Mono', monospace;
+      --radius:      12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--indigo); border-radius: 3px; }
+
+    /* =============================================
+       LAYOUT
+    ============================================= */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: 240px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-logo {
+      padding: 22px 20px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: var(--grad);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .logo-text { font-size: 15px; font-weight: 800; }
+    .logo-badge {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--emerald);
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.25);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+
+    .sidebar-section {
+      padding: 16px 12px 8px;
+    }
+    .sidebar-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-3);
+      padding: 0 8px;
+      margin-bottom: 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .nav-item:hover {
+      background: rgba(99,102,241,0.08);
+      color: var(--text);
+    }
+    .nav-item.active {
+      background: rgba(99,102,241,0.14);
+      color: var(--indigo-l);
+    }
+    .nav-item-icon { font-size: 16px; width: 20px; text-align: center; }
+    .nav-item-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(99,102,241,0.2);
+      color: var(--indigo-l);
+      padding: 1px 7px;
+      border-radius: 10px;
+    }
+    .nav-item-badge.red {
+      background: rgba(244,63,94,0.2);
+      color: var(--rose);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+    .status-dot-wrap {
+      position: relative;
+      width: 10px; height: 10px;
+    }
+    .status-dot {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      background: var(--emerald);
+    }
+    .status-dot-ping {
+      position: absolute; inset: -3px;
+      border-radius: 50%;
+      background: var(--emerald);
+      opacity: 0.3;
+      animation: ping 1.8s infinite;
+    }
+    @keyframes ping {
+      0%   { transform: scale(1); opacity: 0.3; }
+      80%  { transform: scale(2.2); opacity: 0; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    /* ===== MAIN AREA ===== */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .topbar {
+      background: var(--bg-nav);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+      backdrop-filter: blur(12px);
+    }
+    .topbar-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .topbar-sub {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-left: 4px;
+    }
+    .topbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .topbar-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-bright);
+      background: transparent;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .topbar-btn:hover { background: rgba(99,102,241,0.1); }
+    .topbar-btn.primary {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #fff;
+    }
+    .topbar-btn.primary:hover { background: var(--indigo-l); }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px;
+    }
+
+    /* =============================================
+       PAGES
+    ============================================= */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* =============================================
+       CARDS + STATS
+    ============================================= */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      transition: all 0.2s;
+    }
+    .stat-card:hover { border-color: var(--border-bright); }
+    .stat-card-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+      margin-bottom: 8px;
+    }
+    .stat-card-value {
+      font-size: 28px;
+      font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: block;
+    }
+    .stat-card-delta {
+      font-size: 11px;
+      color: var(--emerald);
+      margin-top: 4px;
+    }
+    .stat-card-delta.down { color: var(--rose); }
+
+    /* =============================================
+       POST QUEUE TABLE
+    ============================================= */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .section-header-title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .section-header-sub {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 2px;
+    }
+
+    .card-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .queue-table { width: 100%; border-collapse: collapse; }
+    .queue-table th {
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-3);
+      background: rgba(99,102,241,0.06);
+      border-bottom: 1px solid var(--border);
+    }
+    .queue-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(99,102,241,0.06);
+      font-size: 13px;
+    }
+    .queue-table tr:last-child td { border-bottom: none; }
+    .queue-table tr:hover td { background: rgba(99,102,241,0.04); }
+
+    .platform-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .chip-twitter  { background: rgba(29,161,242,0.12); color: #1da1f2; }
+    .chip-facebook { background: rgba(24,119,242,0.12); color: #1877f2; }
+    .chip-instagram { background: rgba(220,39,67,0.12); color: #dc2743; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .pill-pending   { background: rgba(245,158,11,0.12); color: var(--amber); }
+    .pill-published { background: rgba(16,185,129,0.12); color: var(--emerald); }
+    .pill-failed    { background: rgba(244,63,94,0.12);  color: var(--rose); }
+    .pill-generating { background: rgba(99,102,241,0.12); color: var(--indigo-l); }
+
+    .pill-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .post-preview {
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text-2);
+    }
+
+    .action-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-2);
+      transition: all 0.15s;
+    }
+    .action-btn:hover { background: rgba(99,102,241,0.1); color: var(--indigo-l); border-color: var(--border-bright); }
+
+    /* =============================================
+       COMMENTS PAGE
+    ============================================= */
+    .comment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .comment-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      transition: all 0.2s;
+    }
+    .comment-card:hover { border-color: var(--border-bright); }
+
+    .comment-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .comment-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--grad);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .comment-meta { flex: 1; }
+    .comment-author { font-size: 13px; font-weight: 700; }
+    .comment-post-ref {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+    .comment-post-ref span { color: var(--indigo-l); }
+
+    .comment-text {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      background: rgba(99,102,241,0.05);
+      border-left: 2px solid var(--border-bright);
+      border-radius: 0 6px 6px 0;
+    }
+
+    .ai-reply-block {
+      background: rgba(16,185,129,0.07);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .ai-reply-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--emerald);
+      margin-bottom: 5px;
+    }
+    .ai-reply-text {
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .ai-reply-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .ai-reply-time { font-size: 11px; color: var(--text-3); }
+    .ai-reply-status { font-size: 11px; color: var(--emerald); font-weight: 600; }
+
+    .pending-reply {
+      background: rgba(245,158,11,0.06);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .typing-dots {
+      display: flex; gap: 3px;
+    }
+    .typing-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: typingBounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-5px); opacity: 1; }
+    }
+    .pending-reply-text { font-size: 12px; color: var(--amber); }
+
+    /* =============================================
+       GENERATE PAGE
+    ============================================= */
+    .generate-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 20px;
+    }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      margin-bottom: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus { border-color: var(--indigo); }
+    .form-textarea { min-height: 100px; resize: vertical; }
+    .form-select option { background: #1a1e35; }
+
+    .platform-toggles {
+      display: flex;
+      gap: 8px;
+    }
+    .platform-toggle {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-2);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .platform-toggle.selected-tw  { border-color: #1da1f2; background: rgba(29,161,242,0.1); color: #1da1f2; }
+    .platform-toggle.selected-fb  { border-color: #1877f2; background: rgba(24,119,242,0.1); color: #1877f2; }
+    .platform-toggle.selected-ig  { border-color: #dc2743; background: rgba(220,39,67,0.1); color: #dc2743; }
+
+    .preview-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .preview-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    .mock-post {
+      background: #0d0f1e;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .mock-post-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .mock-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--grad);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .mock-name { font-size: 12px; font-weight: 700; }
+    .mock-time { font-size: 11px; color: var(--text-3); margin-left: auto; }
+    .mock-body {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    .mock-image {
+      width: 100%;
+      height: 120px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2), rgba(6,182,212,0.2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+      color: var(--text-3);
+      font-size: 12px;
+    }
+    .mock-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(99,102,241,0.1);
+    }
+    .mock-action {
+      font-size: 11px;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .generate-btn {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      background: var(--grad);
+      background-size: 200% 200%;
+      border: none;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      margin-top: 4px;
+    }
+    .generate-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .generate-btn:active { transform: translateY(0); }
+    .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* =============================================
+       ANALYTICS PAGE
+    ============================================= */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .chart-title { font-size: 13px; font-weight: 700; margin-bottom: 16px; }
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      height: 100px;
+    }
+    .bar-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .bar {
+      width: 100%;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.6s ease;
+    }
+    .bar-label { font-size: 10px; color: var(--text-3); }
+
+    .mini-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 60px;
+      padding-top: 10px;
+    }
+    .mini-bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      background: rgba(99,102,241,0.3);
+      transition: all 0.4s;
+    }
+    .mini-bar.active { background: var(--indigo); }
+
+    .platform-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(99,102,241,0.07);
+    }
+    .platform-row:last-child { border-bottom: none; }
+    .platform-row-icon { font-size: 18px; width: 28px; text-align: center; }
+    .platform-row-name { font-size: 13px; font-weight: 600; flex: 1; }
+    .platform-row-bar-wrap { flex: 2; height: 6px; background: rgba(99,102,241,0.1); border-radius: 3px; }
+    .platform-row-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+    .platform-row-count { font-size: 12px; color: var(--text-2); width: 50px; text-align: right; font-weight: 600; }
+
+    /* =============================================
+       LOGS PAGE
+    ============================================= */
+    .log-panel {
+      background: #0a0c18;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 2;
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+    .log-line { display: flex; gap: 12px; }
+    .log-time { color: var(--text-3); flex-shrink: 0; width: 95px; }
+    .log-level { flex-shrink: 0; width: 55px; font-weight: 700; }
+    .log-msg { color: var(--text-2); }
+    .log-level.info    { color: var(--sky); }
+    .log-level.success { color: var(--emerald); }
+    .log-level.warn    { color: var(--amber); }
+    .log-level.error   { color: var(--rose); }
+    .log-level.debug   { color: var(--text-3); }
+
+    /* =============================================
+       SETTINGS PAGE
+    ============================================= */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .settings-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .settings-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(99,102,241,0.06);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label { font-size: 13px; }
+    .toggle-sub   { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+    .toggle {
+      width: 36px;
+      height: 20px;
+      background: rgba(99,102,241,0.15);
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      left: 3px; top: 3px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--text-3);
+      transition: left 0.2s, background 0.2s;
+    }
+    .toggle.on { background: rgba(16,185,129,0.3); }
+    .toggle.on::after { left: 19px; background: var(--emerald); }
+
+    /* =============================================
+       MODAL
+    ============================================= */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 16px;
+      padding: 28px;
+      width: 520px;
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+      transform: scale(0.95) translateY(10px);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .modal-title { font-size: 17px; font-weight: 700; }
+    .modal-close {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-2);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .modal-close:hover { background: rgba(244,63,94,0.1); color: var(--rose); border-color: var(--rose); }
+
+    /* =============================================
+       TOAST
+    ============================================= */
+    #toast-container {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateX(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      max-width: 300px;
+    }
+    .toast.show { transform: translateX(0); opacity: 1; }
+    .toast.success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); color: #d1fae5; }
+    .toast.error   { background: rgba(244,63,94,0.15);  border: 1px solid rgba(244,63,94,0.35);  color: #ffe4e6; }
+    .toast.info    { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.35); color: #e0e7ff; }
+
+    /* =============================================
+       LOADING SPINNER
+    ============================================= */
+    .spinner {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(99,102,241,0.2);
+      border-top-color: var(--indigo);
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* =============================================
+       UTILITY
+    ============================================= */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .mt-16 { margin-top: 16px; }
+    .mt-24 { margin-top: 24px; }
+    .text-muted { color: var(--text-3); font-size: 12px; }
+    .flex-between { display: flex; align-items: center; justify-content: space-between; }
+    .gap-8 { gap: 8px; }
+    .relative { position: relative; }
+
+    /* =============================================
+       RESPONSIVE
+    ============================================= */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .generate-layout { grid-template-columns: 1fr; }
+      .analytics-grid { grid-template-columns: 1fr; }
+      .settings-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<!-- ========== TOAST ========== -->
+<div id="toast-container"></div>
+
+<!-- ========== MODAL ========== -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Post Details</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ========== APP SHELL ========== -->
+<div class="app">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🤖</div>
+      <div class="logo-text">GTM Agent</div>
+      <div class="logo-badge">Live</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Main</div>
+      <div class="nav-item active" onclick="navigate('dashboard', this)">
+        <span class="nav-item-icon">📊</span>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="navigate('queue', this)">
+        <span class="nav-item-icon">📋</span>
+        Post Queue
+        <span class="nav-item-badge">12</span>
+      </div>
+      <div class="nav-item" onclick="navigate('comments', this)">
+        <span class="nav-item-icon">💬</span>
+        Comments
+        <span class="nav-item-badge red">4</span>
+      </div>
+      <div class="nav-item" onclick="navigate('generate', this)">
+        <span class="nav-item-icon">✨</span>
+        Generate Content
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Insights</div>
+      <div class="nav-item" onclick="navigate('analytics', this)">
+        <span class="nav-item-icon">📈</span>
+        Analytics
+      </div>
+      <div class="nav-item" onclick="navigate('logs', this)">
+        <span class="nav-item-icon">🔍</span>
+        System Logs
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Config</div>
+      <div class="nav-item" onclick="navigate('settings', this)">
+        <span class="nav-item-icon">⚙️</span>
+        Settings
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="system-status">
+        <div class="status-dot-wrap">
+          <div class="status-dot-ping"></div>
+          <div class="status-dot"></div>
+        </div>
+        All systems operational
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:6px;">
+        Next cron: <span style="color:var(--indigo-l)" id="next-cron">3:42</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+        <span class="topbar-sub" id="page-sub">GTM Agent — Autonomous Social Media Manager</span>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn" onclick="triggerCron('monitor')">Run Monitor</button>
+        <button class="topbar-btn primary" onclick="navigate('generate', null)">+ New Post</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ===== DASHBOARD PAGE ===== -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card-label">Posts Today</div>
+            <span class="stat-card-value" id="stat-posts">14</span>
+            <div class="stat-card-delta">+5 vs yesterday</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Comments Replied</div>
+            <span class="stat-card-value">47</span>
+            <div class="stat-card-delta">100% auto-reply rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Queue Size</div>
+            <span class="stat-card-value">12</span>
+            <div class="stat-card-delta">Next post in 4 min</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">AI Tokens Used</div>
+            <span class="stat-card-value">18K</span>
+            <div class="stat-card-delta down">$0.11 today</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Cron status -->
+          <div class="card-panel">
+            <div style="padding:14px 16px; border-bottom:1px solid var(--border);">
+              <div class="section-header-title">Cron Job Status</div>
+            </div>
+            <div style="padding:12px 0;">
+              <div class="platform-row" style="padding:10px 16px;">
+                <div class="platform-row-icon">📤</div>
+                <div>
+                  <div class="platform-row-name">Post Scheduler</div>
+                  <div class="text-muted">Every 5 min · Last: 2 min ago</div>
+                </div>
+                <span class="status-pill pill-published"><span class="pill-dot"></span>Running</span>
+              </div>
+              <div class="platform-row" style="padding:10px 16px;">
+                <div class="platform-row-icon">💬</div>
+                <div>
+                  <div class="platform-row-name">Comment Monitor</div>
+                  <div class="text-muted">Every 3 min · Last: 1 min ago</div>
+                </div>
+                <span class="status-pill pill-published"><span class="pill-dot"></span>Running</span>
+              </div>
+              <div class="platform-row" style="padding:10px 16px;">
+                <div class="platform-row-icon">✨</div>
+                <div>
+                  <div class="platform-row-name">Content Generator</div>
+                  <div class="text-muted">Every 4 hrs · Next: 2h 18m</div>
+                </div>
+                <span class="status-pill pill-pending"><span class="pill-dot"></span>Idle</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Platform status -->
+          <div class="card-panel">
+            <div style="padding:14px 16px; border-bottom:1px solid var(--border);">
+              <div class="section-header-title">Platform Health</div>
+            </div>
+            <div style="padding:12px 0;">
+              <div class="platform-row" style="padding:10px 16px;">
+                <span class="platform-row-icon">🐦</span>
+                <div>
+                  <div class="platform-row-name">Twitter / X</div>
+                  <div class="text-muted">Rate: 487/500 tokens remain</div>
+                </div>
+                <span class="status-pill pill-published"><span class="pill-dot"></span>Connected</span>
+              </div>
+              <div class="platform-row" style="padding:10px 16px;">
+                <span class="platform-row-icon">📘</span>
+                <div>
+                  <div class="platform-row-name">Facebook Pages</div>
+                  <div class="text-muted">Webhook: Active · Token: 48d left</div>
+                </div>
+                <span class="status-pill pill-published"><span class="pill-dot"></span>Connected</span>
+              </div>
+              <div class="platform-row" style="padding:10px 16px;">
+                <span class="platform-row-icon">📸</span>
+                <div>
+                  <div class="platform-row-name">Instagram Business</div>
+                  <div class="text-muted">Posts today: 3/25 · Webhook: Active</div>
+                </div>
+                <span class="status-pill pill-published"><span class="pill-dot"></span>Connected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="mt-24 card-panel">
+          <div style="padding:14px 16px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding-bottom:14px;">
+            <div class="section-header-title">Recent Activity</div>
+            <button class="action-btn" onclick="navigate('queue', null)">View All</button>
+          </div>
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th>Platform</th>
+                <th>Content Preview</th>
+                <th>Status</th>
+                <th>Time</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="platform-chip chip-twitter">🐦 Twitter</span></td>
+                <td><div class="post-preview">Excited to share our Q1 roadmap highlights! We've been working hard on...</div></td>
+                <td><span class="status-pill pill-published"><span class="pill-dot"></span>Published</span></td>
+                <td class="text-muted">2 min ago</td>
+                <td><button class="action-btn" onclick="openPostModal('twitter-1')">View</button></td>
+              </tr>
+              <tr>
+                <td><span class="platform-chip chip-instagram">📸 Instagram</span></td>
+                <td><div class="post-preview">Transform your workflow with AI-powered automation. Here's how our...</div></td>
+                <td><span class="status-pill pill-published"><span class="pill-dot"></span>Published</span></td>
+                <td class="text-muted">7 min ago</td>
+                <td><button class="action-btn" onclick="openPostModal('ig-1')">View</button></td>
+              </tr>
+              <tr>
+                <td><span class="platform-chip chip-facebook">📘 Facebook</span></td>
+                <td><div class="post-preview">We're thrilled to announce our new partnership with industry leaders...</div></td>
+                <td><span class="status-pill pill-pending"><span class="pill-dot"></span>Scheduled</span></td>
+                <td class="text-muted">In 12 min</td>
+                <td><button class="action-btn" onclick="openPostModal('fb-1')">View</button></td>
+              </tr>
+              <tr>
+                <td><span class="platform-chip chip-twitter">🐦 Twitter</span></td>
+                <td><div class="post-preview">5 productivity tips that successful teams swear by in 2026 — thread 🧵</div></td>
+                <td><span class="status-pill pill-generating"><span class="spinner"></span> Generating</span></td>
+                <td class="text-muted">In 4 hrs</td>
+                <td><button class="action-btn">View</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== QUEUE PAGE ===== -->
+      <div class="page" id="page-queue">
+        <div class="section-header">
+          <div>
+            <div class="section-header-title">Post Queue</div>
+            <div class="section-header-sub">12 posts scheduled · 3 platforms</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="topbar-btn" onclick="triggerCron('post')">Trigger Post Cron</button>
+            <button class="topbar-btn primary" onclick="navigate('generate', null)">+ Add Post</button>
+          </div>
+        </div>
+        <div class="card-panel">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th>Platform</th>
+                <th>Content</th>
+                <th>Source</th>
+                <th>Scheduled At</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="queue-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== COMMENTS PAGE ===== -->
+      <div class="page" id="page-comments">
+        <div class="section-header">
+          <div>
+            <div class="section-header-title">Comment Monitor</div>
+            <div class="section-header-sub">51 total · 47 replied · 4 pending</div>
+          </div>
+          <button class="topbar-btn" onclick="triggerCron('monitor')">Run Monitor Now</button>
+        </div>
+        <div class="comment-list" id="comment-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- ===== GENERATE PAGE ===== -->
+      <div class="page" id="page-generate">
+        <div class="section-header">
+          <div>
+            <div class="section-header-title">Generate Content</div>
+            <div class="section-header-sub">AI-powered post creation using Gemini + kie.ai</div>
+          </div>
+        </div>
+        <div class="generate-layout">
+          <div>
+            <div class="card-panel" style="padding:22px;">
+              <div class="form-group">
+                <label class="form-label">Topic / Prompt</label>
+                <input type="text" class="form-input" id="gen-topic" placeholder="e.g. Q2 product launch, tips for productivity, customer success story..." />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Target Platforms</label>
+                <div class="platform-toggles">
+                  <button class="platform-toggle selected-tw" onclick="togglePlatform(this, 'tw')" data-p="tw">🐦 Twitter</button>
+                  <button class="platform-toggle selected-fb" onclick="togglePlatform(this, 'fb')" data-p="fb">📘 Facebook</button>
+                  <button class="platform-toggle selected-ig" onclick="togglePlatform(this, 'ig')" data-p="ig">📸 Instagram</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Brand Voice Override</label>
+                <select class="form-select">
+                  <option>Use config.json default (professional + approachable)</option>
+                  <option>Casual and playful</option>
+                  <option>Authoritative and data-driven</option>
+                  <option>Inspirational and motivational</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Schedule Time</label>
+                <input type="datetime-local" class="form-input" id="gen-schedule" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Include AI Image</label>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                  <button class="toggle on" id="img-toggle" onclick="this.classList.toggle('on')"></button>
+                  <span style="font-size:12px;color:var(--text-2);">Generate matching image via kie.ai (~$0.03)</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Custom Image Prompt (optional)</label>
+                <textarea class="form-textarea" style="min-height:70px;" placeholder="Leave blank to auto-generate from post content..."></textarea>
+              </div>
+              <button class="generate-btn" id="gen-btn" onclick="runGenerate()">
+                ✨ Generate with Gemini + kie.ai
+              </button>
+            </div>
+          </div>
+
+          <!-- Preview panel -->
+          <div>
+            <div class="preview-card">
+              <div class="preview-title">Content Preview</div>
+              <div id="preview-area">
+                <div class="mock-post">
+                  <div class="mock-post-header">
+                    <div class="mock-avatar">B</div>
+                    <div>
+                      <div class="mock-name">Your Brand</div>
+                      <div style="font-size:10px;color:var(--text-3);">🐦 Twitter · @yourbrand</div>
+                    </div>
+                    <div class="mock-time">Just now</div>
+                  </div>
+                  <div class="mock-body" id="preview-twitter">
+                    Excited to share our latest insights on industry trends! The future of automation is here and it's transforming how teams work. Stay ahead of the curve with our cutting-edge platform. #Innovation #Tech #Automation
+                  </div>
+                  <div class="mock-image" id="preview-img">
+                    🎨 AI Image — kie.ai will generate here
+                  </div>
+                  <div class="mock-actions">
+                    <span class="mock-action">🔁 Repost</span>
+                    <span class="mock-action">❤️ Like</span>
+                    <span class="mock-action">💬 Reply</span>
+                  </div>
+                </div>
+
+                <div style="padding:12px 0 8px;">
+                  <span class="status-pill pill-pending" style="font-size:11px;">
+                    <span class="pill-dot"></span>
+                    Awaiting generation — click Generate
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI status -->
+            <div class="card-panel mt-16" style="padding:14px 16px;">
+              <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-2);">AI Pipeline Status</div>
+              <div id="ai-pipeline-status">
+                <div class="platform-row" style="padding:6px 0;">
+                  <span style="font-size:14px;">🧠</span>
+                  <div style="flex:1;margin-left:8px;">
+                    <div style="font-size:12px;font-weight:600;">Gemini text generation</div>
+                  </div>
+                  <span class="status-pill pill-pending" style="font-size:10px;"><span class="pill-dot"></span>Ready</span>
+                </div>
+                <div class="platform-row" style="padding:6px 0;">
+                  <span style="font-size:14px;">🎨</span>
+                  <div style="flex:1;margin-left:8px;">
+                    <div style="font-size:12px;font-weight:600;">kie.ai image generation</div>
+                  </div>
+                  <span class="status-pill pill-pending" style="font-size:10px;"><span class="pill-dot"></span>Ready</span>
+                </div>
+                <div class="platform-row" style="padding:6px 0;border-bottom:none;">
+                  <span style="font-size:14px;">🗄️</span>
+                  <div style="flex:1;margin-left:8px;">
+                    <div style="font-size:12px;font-weight:600;">MongoDB queued_posts</div>
+                  </div>
+                  <span class="status-pill pill-pending" style="font-size:10px;"><span class="pill-dot"></span>Ready</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ANALYTICS PAGE ===== -->
+      <div class="page" id="page-analytics">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card-label">Total Posts</div>
+            <span class="stat-card-value">284</span>
+            <div class="stat-card-delta">Last 30 days</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Auto-Replies</div>
+            <span class="stat-card-value">1.2K</span>
+            <div class="stat-card-delta">98.4% reply rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Images Generated</div>
+            <span class="stat-card-value">142</span>
+            <div class="stat-card-delta">~$4.26 total cost</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">AI Uptime</div>
+            <span class="stat-card-value">99.8%</span>
+            <div class="stat-card-delta">Zero missed crons</div>
+          </div>
+        </div>
+
+        <div class="analytics-grid">
+          <div class="chart-card">
+            <div class="chart-title">Posts Per Day (Last 7 Days)</div>
+            <div class="bar-chart" id="posts-chart">
+              <!-- Populated by JS -->
+            </div>
+            <div style="display:flex;justify-content:center;gap:14px;margin-top:10px;">
+              <span style="font-size:11px;color:var(--text-3);">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--indigo);margin-right:4px;vertical-align:middle;"></span>Twitter
+              </span>
+              <span style="font-size:11px;color:var(--text-3);">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--violet);margin-right:4px;vertical-align:middle;"></span>Facebook
+              </span>
+              <span style="font-size:11px;color:var(--text-3);">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--cyan);margin-right:4px;vertical-align:middle;"></span>Instagram
+              </span>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">Comments by Platform</div>
+            <div id="platform-breakdown">
+              <div class="platform-row">
+                <span class="platform-row-icon">🐦</span>
+                <span class="platform-row-name">Twitter / X</span>
+                <div class="platform-row-bar-wrap">
+                  <div class="platform-row-bar-fill" style="width:72%;background:var(--indigo);"></div>
+                </div>
+                <span class="platform-row-count">587</span>
+              </div>
+              <div class="platform-row">
+                <span class="platform-row-icon">📘</span>
+                <span class="platform-row-name">Facebook</span>
+                <div class="platform-row-bar-wrap">
+                  <div class="platform-row-bar-fill" style="width:55%;background:var(--violet);"></div>
+                </div>
+                <span class="platform-row-count">448</span>
+              </div>
+              <div class="platform-row">
+                <span class="platform-row-icon">📸</span>
+                <span class="platform-row-name">Instagram</span>
+                <div class="platform-row-bar-wrap">
+                  <div class="platform-row-bar-fill" style="width:38%;background:var(--rose);"></div>
+                </div>
+                <span class="platform-row-count">217</span>
+              </div>
+            </div>
+            <div class="chart-card" style="margin-top:16px;padding:14px;">
+              <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-2);">Comment Activity (Hourly)</div>
+              <div class="mini-chart" id="mini-chart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== LOGS PAGE ===== -->
+      <div class="page" id="page-logs">
+        <div class="section-header">
+          <div>
+            <div class="section-header-title">System Logs</div>
+            <div class="section-header-sub">Structured JSON logs captured by Vercel</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="topbar-btn" onclick="clearLogs()">Clear</button>
+            <button class="topbar-btn primary" onclick="addLogLine()">Simulate Cron</button>
+          </div>
+        </div>
+        <div class="log-panel" id="log-panel">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- ===== SETTINGS PAGE ===== -->
+      <div class="page" id="page-settings">
+        <div class="section-header">
+          <div class="section-header-title">Settings</div>
+        </div>
+        <div class="settings-grid">
+          <div class="settings-section">
+            <div class="settings-section-title">Platform Toggles</div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">🐦 Twitter / X</div>
+                <div class="toggle-sub">Max 10 posts/day · OAuth 1.0a</div>
+              </div>
+              <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">📘 Facebook Pages</div>
+                <div class="toggle-sub">Max 5 posts/day · Token: 48d left</div>
+              </div>
+              <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">📸 Instagram Business</div>
+                <div class="toggle-sub">Max 5 posts/day · Requires image</div>
+              </div>
+              <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-section-title">AI Configuration</div>
+            <div class="form-group">
+              <label class="form-label">Gemini Model</label>
+              <select class="form-select">
+                <option>gemini-2.0-flash (default)</option>
+                <option>gemini-1.5-pro</option>
+                <option>gemini-1.5-flash</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Temperature</label>
+              <input type="range" min="0" max="1" step="0.1" value="0.7" style="width:100%;accent-color:var(--indigo);" />
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-top:4px;">
+                <span>Precise</span><span>0.7</span><span>Creative</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reply Context Depth</label>
+              <select class="form-select">
+                <option>5 previous messages (default)</option>
+                <option>3 previous messages</option>
+                <option>10 previous messages</option>
+              </select>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-section-title">Schedule Settings</div>
+            <div class="form-group">
+              <label class="form-label">Post Times (UTC)</label>
+              <input type="text" class="form-input" value="09:00, 13:00, 18:00" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Timezone</label>
+              <select class="form-select">
+                <option>America/Los_Angeles (default)</option>
+                <option>America/New_York</option>
+                <option>UTC</option>
+                <option>Europe/London</option>
+              </select>
+            </div>
+            <button class="topbar-btn primary" style="width:100%;padding:10px;" onclick="showToast('Settings saved!','success')">Save Schedule</button>
+          </div>
+          <div class="settings-section">
+            <div class="settings-section-title">Brand Voice</div>
+            <div class="form-group">
+              <label class="form-label">Brand Name</label>
+              <input type="text" class="form-input" value="Your Brand" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Voice Descriptor</label>
+              <textarea class="form-textarea" style="min-height:72px;">professional yet approachable, with a touch of humor</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Topics</label>
+              <input type="text" class="form-input" value="industry trends, product updates, customer success" />
+            </div>
+            <button class="topbar-btn primary" style="width:100%;padding:10px;" onclick="showToast('Brand config saved!','success')">Save Brand Config</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+  // =============================================
+  // DATA
+  // =============================================
+  const SAMPLE_POSTS = [
+    { id: 'tw-1', platform: 'twitter', content: 'Excited to share our Q1 roadmap highlights! We've been working hard on game-changing features. #Innovation #Tech', source: 'ai_generated', scheduled: '09:00 UTC', status: 'published' },
+    { id: 'fb-1', platform: 'facebook', content: 'We're thrilled to announce our new partnership with industry leaders to bring you even better solutions.', source: 'ai_generated', scheduled: '09:00 UTC', status: 'published' },
+    { id: 'ig-1', platform: 'instagram', content: 'Transform your workflow with AI-powered automation. Here's how our customers are saving 10 hours/week. #Productivity', source: 'ai_generated', scheduled: '09:00 UTC', status: 'published' },
+    { id: 'tw-2', platform: 'twitter', content: '5 productivity tips that successful teams swear by in 2026 — thread 🧵 1/5: Start with clear goals...', source: 'ai_generated', scheduled: '13:00 UTC', status: 'pending' },
+    { id: 'fb-2', platform: 'facebook', content: 'Industry Trend Alert: AI automation is now the #1 priority for enterprise teams. Read our latest report.', source: 'ai_generated', scheduled: '13:00 UTC', status: 'pending' },
+    { id: 'ig-2', platform: 'instagram', content: 'Behind the scenes at our product team — building the future one sprint at a time 🚀 #BehindTheScenes', source: 'manual', scheduled: '13:00 UTC', status: 'pending' },
+    { id: 'tw-3', platform: 'twitter', content: 'Customer spotlight: How @ExampleCo increased ROI by 340% using our platform. Full case study in the link below.', source: 'ai_generated', scheduled: '18:00 UTC', status: 'pending' },
+    { id: 'fb-3', platform: 'facebook', content: 'Tips and Best Practices: Making the most of social media automation in Q1 2026.', source: 'ai_generated', scheduled: '18:00 UTC', status: 'pending' },
+    { id: 'ig-3', platform: 'instagram', content: 'Motivation Monday: Your biggest competitor is who you were yesterday. Keep building. 💪 #MondayMotivation', source: 'ai_generated', scheduled: '18:00 UTC', status: 'pending' },
+    { id: 'tw-4', platform: 'twitter', content: 'New blog post just dropped: "The Complete Guide to Autonomous Marketing in 2026" — link below 📖', source: 'manual', scheduled: 'Tomorrow 09:00', status: 'pending' },
+    { id: 'fb-4', platform: 'facebook', content: '[Generating...] AI content being created for tomorrow\'s post.', source: 'ai_generated', scheduled: 'Tomorrow 09:00', status: 'failed' },
+    { id: 'ig-4', platform: 'instagram', content: 'Creating engaging reel content about productivity. Image generation in progress.', source: 'ai_generated', scheduled: 'Tomorrow 13:00', status: 'pending' },
+  ];
+
+  const SAMPLE_COMMENTS = [
+    {
+      id: 'c1', platform: 'twitter', author: 'Alex Chen', initials: 'AC',
+      postRef: 'Q1 Roadmap post (Twitter)',
+      comment: 'This looks amazing! Will there be an API available for developers to integrate with? Really excited about the roadmap.',
+      reply: 'Absolutely, Alex! We\'re planning to release a comprehensive API in Q2 with full documentation. You\'ll be able to integrate directly with your existing workflows. Stay tuned for the developer preview! 🚀',
+      replied: true, time: '5 min ago',
+    },
+    {
+      id: 'c2', platform: 'instagram', author: 'Sarah M.', initials: 'SM',
+      postRef: 'Automation workflow post (Instagram)',
+      comment: 'How does the AI generate replies? Is it safe for customer-facing use?',
+      reply: 'Great question, Sarah! Our AI uses Google Gemini with carefully tuned prompts specific to your brand voice. All replies are contextual — the AI reads the original post AND the full conversation thread before generating. We also have a topic-avoidance list to keep things professional! 😊',
+      replied: true, time: '12 min ago',
+    },
+    {
+      id: 'c3', platform: 'facebook', author: 'Marcus T.', initials: 'MT',
+      postRef: 'Partnership announcement (Facebook)',
+      comment: 'Congratulations! This is huge news for the industry. When will the integration be live?',
+      reply: null, replied: false, time: '18 min ago',
+    },
+    {
+      id: 'c4', platform: 'twitter', author: 'Priya K.', initials: 'PK',
+      postRef: 'Productivity tips thread (Twitter)',
+      comment: 'Thread saved! These are genuinely useful tips. Tip #3 changed how my team does standups. Thank you!',
+      reply: null, replied: false, time: '24 min ago',
+    },
+    {
+      id: 'c5', platform: 'instagram', author: 'Jake R.', initials: 'JR',
+      postRef: 'Behind the scenes (Instagram)',
+      comment: 'Love the transparency! What stack are you using? Would love to know more about the tech.',
+      reply: 'Thanks Jake! We\'re built on Next.js 15 with TypeScript, deployed on Vercel with serverless functions and cron jobs. MongoDB for persistence, Google Gemini for AI text, and kie.ai for image generation. Happy to share more — feel free to DM us! 🛠️',
+      replied: true, time: '41 min ago',
+    },
+  ];
+
+  const LOG_ENTRIES = [
+    { time: '14:37:02.143', level: 'info',    msg: '[cron/monitor] Starting comment monitor cycle' },
+    { time: '14:37:02.287', level: 'info',    msg: '[cron/monitor] Fetched 47 published posts (last 7 days)' },
+    { time: '14:37:02.544', level: 'info',    msg: '[twitter] Polling comments for post_id:1234567 since 2026-03-08T14:34:00Z' },
+    { time: '14:37:02.891', level: 'success', msg: '[twitter] Found 2 new comments — processing' },
+    { time: '14:37:03.122', level: 'info',    msg: '[gemini] Generating reply for comment c_abc123 (context: 3 messages)' },
+    { time: '14:37:03.867', level: 'success', msg: '[gemini] Reply generated (147 tokens) in 745ms' },
+    { time: '14:37:04.011', level: 'success', msg: '[twitter] Reply posted: reply_id:9876543' },
+    { time: '14:37:04.113', level: 'info',    msg: '[mongodb] comment c_abc123 marked hasBeenReplied:true' },
+    { time: '14:37:04.544', level: 'info',    msg: '[facebook] Polling comments for page_post_id:fb_post_001' },
+    { time: '14:37:04.891', level: 'info',    msg: '[facebook] No new comments since last poll' },
+    { time: '14:37:05.102', level: 'info',    msg: '[instagram] Polling comments for media_id:ig_media_042' },
+    { time: '14:37:05.443', level: 'success', msg: '[instagram] Found 1 new comment — processing' },
+    { time: '14:37:06.211', level: 'success', msg: '[cron/monitor] Cycle complete. Processed: 3 comments, Replied: 3, Skipped: 0' },
+    { time: '14:37:06.212', level: 'info',    msg: '[mongodb] poll_cursors updated for 47 posts' },
+    { time: '14:40:00.001', level: 'info',    msg: '[cron/post] Starting post scheduler cycle' },
+    { time: '14:40:00.234', level: 'info',    msg: '[mongodb] Found 1 due post: queued_post_id:qp_tw_009 (Twitter)' },
+    { time: '14:40:00.445', level: 'info',    msg: '[rate-limiter] Twitter tokens: 487/500 — OK to proceed' },
+    { time: '14:40:00.891', level: 'success', msg: '[twitter] Published tweet_id:tweet_112233 successfully' },
+    { time: '14:40:00.934', level: 'info',    msg: '[mongodb] Moved qp_tw_009 → published_posts' },
+    { time: '14:40:00.981', level: 'success', msg: '[cron/post] Cycle complete. Published: 1, Skipped: 0, Failed: 0' },
+  ];
+
+  // =============================================
+  // NAVIGATION
+  // =============================================
+  const PAGE_META = {
+    dashboard: { title: 'Dashboard', sub: 'GTM Agent — Autonomous Social Media Manager' },
+    queue:     { title: 'Post Queue', sub: 'Manage your scheduled and queued posts' },
+    comments:  { title: 'Comment Monitor', sub: 'AI-generated replies across all platforms' },
+    generate:  { title: 'Generate Content', sub: 'AI-powered post creation' },
+    analytics: { title: 'Analytics', sub: 'Performance across all platforms' },
+    logs:      { title: 'System Logs', sub: 'Structured Vercel runtime logs' },
+    settings:  { title: 'Settings', sub: 'Configure platforms, AI, and scheduling' },
+  };
+
+  function navigate(pageId, navEl) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + pageId).classList.add('active');
+
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if (navEl) navEl.classList.add('active');
+    else {
+      document.querySelectorAll('.nav-item').forEach(n => {
+        if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + pageId + "'")) {
+          n.classList.add('active');
+        }
+      });
+    }
+
+    const meta = PAGE_META[pageId] || {};
+    document.getElementById('page-title').textContent = meta.title || pageId;
+    document.getElementById('page-sub').textContent = meta.sub || '';
+
+    if (pageId === 'queue') renderQueue();
+    if (pageId === 'comments') renderComments();
+    if (pageId === 'analytics') renderCharts();
+    if (pageId === 'logs') renderLogs();
+  }
+
+  // =============================================
+  // QUEUE
+  // =============================================
+  function renderQueue() {
+    const tbody = document.getElementById('queue-tbody');
+    const platformChip = { twitter: 'chip-twitter 🐦 Twitter', facebook: 'chip-facebook 📘 Facebook', instagram: 'chip-instagram 📸 Instagram' };
+    const statusMap = {
+      published: '<span class="status-pill pill-published"><span class="pill-dot"></span>Published</span>',
+      pending:   '<span class="status-pill pill-pending"><span class="pill-dot"></span>Scheduled</span>',
+      failed:    '<span class="status-pill pill-failed"><span class="pill-dot"></span>Failed</span>',
+    };
+
+    tbody.innerHTML = SAMPLE_POSTS.map(p => {
+      const [cls, ...label] = platformChip[p.platform].split(' ');
+      return `
+        <tr>
+          <td><span class="platform-chip ${cls}">${label.join(' ')}</span></td>
+          <td><div class="post-preview">${p.content}</div></td>
+          <td><span style="font-size:11px;color:var(--text-3);">${p.source === 'ai_generated' ? '✨ AI' : '👤 Manual'}</span></td>
+          <td class="text-muted">${p.scheduled}</td>
+          <td>${statusMap[p.status] || ''}</td>
+          <td><button class="action-btn" onclick="openPostModal('${p.id}')">View</button></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // =============================================
+  // COMMENTS
+  // =============================================
+  function renderComments() {
+    const el = document.getElementById('comment-list');
+    el.innerHTML = SAMPLE_COMMENTS.map(c => {
+      const replyBlock = c.replied
+        ? `<div class="ai-reply-block">
+            <div class="ai-reply-label">✨ Gemini AI Reply</div>
+            <div class="ai-reply-text">${c.reply}</div>
+            <div class="ai-reply-footer">
+              <span class="ai-reply-time">${c.time} · via Gemini 2.0 Flash</span>
+              <span class="ai-reply-status">Replied</span>
+            </div>
+          </div>`
+        : `<div class="pending-reply">
+            <div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+            <span class="pending-reply-text">Gemini is generating a reply...</span>
+            <button class="action-btn" style="margin-left:auto;" onclick="replyNow('${c.id}', this)">Reply Now</button>
+          </div>`;
+
+      const platformEmoji = { twitter: '🐦', instagram: '📸', facebook: '📘' }[c.platform] || '🌐';
+
+      return `
+        <div class="comment-card" id="comment-${c.id}">
+          <div class="comment-header">
+            <div class="comment-avatar">${c.initials}</div>
+            <div class="comment-meta">
+              <div class="comment-author">${c.author}</div>
+              <div class="comment-post-ref">${platformEmoji} <span>${c.postRef}</span> · ${c.time}</div>
+            </div>
+            <span class="platform-chip ${c.platform === 'twitter' ? 'chip-twitter' : c.platform === 'instagram' ? 'chip-instagram' : 'chip-facebook'}" style="font-size:10px;">${c.platform}</span>
+          </div>
+          <div class="comment-text">"${c.comment}"</div>
+          <div id="reply-block-${c.id}">${replyBlock}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function replyNow(id, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    setTimeout(() => {
+      const comment = SAMPLE_COMMENTS.find(c => c.id === id);
+      const el = document.getElementById('reply-block-' + id);
+      el.innerHTML = `
+        <div class="ai-reply-block">
+          <div class="ai-reply-label">✨ Gemini AI Reply</div>
+          <div class="ai-reply-text">Thank you for your comment! We really appreciate your engagement and will make sure to follow up with more details soon. Stay tuned for updates! 🚀</div>
+          <div class="ai-reply-footer">
+            <span class="ai-reply-time">Just now · via Gemini 2.0 Flash</span>
+            <span class="ai-reply-status">Replied</span>
+          </div>
+        </div>`;
+      showToast('AI reply posted successfully!', 'success');
+    }, 1800);
+  }
+
+  // =============================================
+  // GENERATE
+  // =============================================
+  const selectedPlatforms = new Set(['tw', 'fb', 'ig']);
+
+  function togglePlatform(btn, p) {
+    const classMap = { tw: 'selected-tw', fb: 'selected-fb', ig: 'selected-ig' };
+    if (selectedPlatforms.has(p)) {
+      selectedPlatforms.delete(p);
+      btn.classList.remove(classMap[p]);
+    } else {
+      selectedPlatforms.add(p);
+      btn.classList.add(classMap[p]);
+    }
+  }
+
+  const GEN_CONTENTS = [
+    "Unlock the power of AI automation for your social media strategy. Our platform handles everything — from content creation to real-time comment replies — so you can focus on what matters most: growing your business. #AIMarketing #Automation",
+    "The future of marketing is autonomous. With AI-generated content and instant comment replies, your brand stays engaged 24/7 without lifting a finger. Ready to transform your social strategy? #GTMAgent #Innovation",
+    "Did you know? Teams using AI-powered social media automation save an average of 15 hours per week. That's 780 hours per year back in your pocket. What would you do with that time? 🤔 #ProductivityTips #AI",
+    "Customer spotlight: @StartupXYZ increased their social engagement by 280% in just 60 days using automated, AI-generated content. The secret? Consistency + relevance + speed. #CaseStudy #Success",
+  ];
+  let genIndex = 0;
+
+  function runGenerate() {
+    const btn = document.getElementById('gen-btn');
+    const topic = document.getElementById('gen-topic').value || 'AI automation and productivity';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Calling Gemini...';
+
+    const statusItems = document.querySelectorAll('#ai-pipeline-status .status-pill');
+
+    // Step 1: Gemini
+    setTimeout(() => {
+      btn.innerHTML = '<span class="spinner"></span> Generating image via kie.ai...';
+      statusItems[0].innerHTML = '<span class="pill-dot"></span>Generating';
+      statusItems[0].className = 'status-pill pill-generating';
+    }, 800);
+
+    // Step 2: kie.ai
+    setTimeout(() => {
+      statusItems[0].innerHTML = '<span class="pill-dot"></span>Done';
+      statusItems[0].className = 'status-pill pill-published';
+      statusItems[1].innerHTML = '<span class="pill-dot"></span>Polling...';
+      statusItems[1].className = 'status-pill pill-generating';
+      document.getElementById('preview-twitter').textContent = GEN_CONTENTS[genIndex % GEN_CONTENTS.length];
+      genIndex++;
+    }, 2200);
+
+    // Step 3: MongoDB
+    setTimeout(() => {
+      btn.innerHTML = '<span class="spinner"></span> Saving to MongoDB...';
+      statusItems[1].innerHTML = '<span class="pill-dot"></span>Done';
+      statusItems[1].className = 'status-pill pill-published';
+      document.getElementById('preview-img').innerHTML = '🖼️ &nbsp;AI Image generated — will be attached';
+      document.getElementById('preview-img').style.background = 'linear-gradient(135deg,rgba(99,102,241,0.3),rgba(139,92,246,0.3),rgba(6,182,212,0.3))';
+      statusItems[2].innerHTML = '<span class="pill-dot"></span>Saving...';
+      statusItems[2].className = 'status-pill pill-generating';
+    }, 3600);
+
+    // Done
+    setTimeout(() => {
+      statusItems[2].innerHTML = '<span class="pill-dot"></span>Saved';
+      statusItems[2].className = 'status-pill pill-published';
+      btn.disabled = false;
+      btn.innerHTML = '✨ Generate with Gemini + kie.ai';
+      showToast('Post queued successfully! Scheduled for next slot.', 'success');
+      SAMPLE_POSTS.unshift({ id: 'new-' + Date.now(), platform: 'twitter', content: GEN_CONTENTS[(genIndex-1) % GEN_CONTENTS.length], source: 'ai_generated', scheduled: 'Today 18:00 UTC', status: 'pending' });
+    }, 4800);
+  }
+
+  // =============================================
+  // ANALYTICS
+  // =============================================
+  function renderCharts() {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const twData = [8, 12, 9, 14, 11, 6, 10];
+    const fbData = [4, 5, 4, 5, 5, 3, 5];
+    const igData = [5, 5, 5, 5, 5, 4, 5];
+    const maxVal = Math.max(...twData.map((v,i) => v + fbData[i] + igData[i]));
+
+    const chart = document.getElementById('posts-chart');
+    chart.innerHTML = days.map((d, i) => {
+      const tw = Math.round((twData[i] / maxVal) * 90);
+      const fb = Math.round((fbData[i] / maxVal) * 90);
+      const ig = Math.round((igData[i] / maxVal) * 90);
+      return `
+        <div class="bar-group">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;justify-content:flex-end;">
+            <div class="bar" style="height:${ig}px;background:var(--cyan);opacity:0.85;"></div>
+            <div class="bar" style="height:${fb}px;background:var(--violet);opacity:0.85;"></div>
+            <div class="bar" style="height:${tw}px;background:var(--indigo);opacity:0.85;"></div>
+          </div>
+          <div class="bar-label">${d}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Mini chart
+    const mini = document.getElementById('mini-chart');
+    const miniData = [3, 7, 12, 8, 14, 19, 22, 18, 25, 21, 16, 11, 8, 5, 3, 6, 9, 14, 17, 20, 22, 18, 12, 8];
+    const maxMini = Math.max(...miniData);
+    mini.innerHTML = miniData.map((v, i) => {
+      const h = Math.round((v / maxMini) * 50) + 4;
+      const isActive = i >= 18;
+      return `<div class="mini-bar ${isActive ? 'active' : ''}" style="height:${h}px;"></div>`;
+    }).join('');
+  }
+
+  // =============================================
+  // LOGS
+  // =============================================
+  function renderLogs() {
+    const panel = document.getElementById('log-panel');
+    panel.innerHTML = LOG_ENTRIES.map(l => logLine(l)).join('');
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  function logLine(l) {
+    return `<div class="log-line">
+      <span class="log-time">${l.time}</span>
+      <span class="log-level ${l.level}">[${l.level.toUpperCase()}]</span>
+      <span class="log-msg">${l.msg}</span>
+    </div>`;
+  }
+
+  function addLogLine() {
+    const panel = document.getElementById('log-panel');
+    const now = new Date();
+    const ts = now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0');
+    const entries = [
+      { time: ts, level: 'info',    msg: '[cron/generate] Starting content prefill cycle' },
+      { time: ts, level: 'info',    msg: '[gemini] POST /v1beta/models/gemini-2.0-flash:generateContent' },
+      { time: ts, level: 'success', msg: '[gemini] Text generated in 623ms (204 tokens used)' },
+      { time: ts, level: 'info',    msg: '[kie-ai] POST /api/v1/gpt4o-image/generate — taskId: task_' + Math.random().toString(36).slice(2,10) },
+      { time: ts, level: 'info',    msg: '[kie-ai] Polling task... progress: 0.32' },
+      { time: ts, level: 'info',    msg: '[kie-ai] Polling task... progress: 0.71' },
+      { time: ts, level: 'success', msg: '[kie-ai] Image ready: successFlag=1 — URL saved' },
+      { time: ts, level: 'success', msg: '[mongodb] Inserted queued_post qp_tw_' + Math.floor(Math.random()*999) + ' (status:pending, platform:twitter)' },
+      { time: ts, level: 'success', msg: '[cron/generate] Cycle complete. Generated 3 posts across 3 platforms.' },
+    ];
+    entries.forEach((e, i) => {
+      setTimeout(() => {
+        panel.innerHTML += logLine(e);
+        panel.scrollTop = panel.scrollHeight;
+        showToast('Simulating cron cycle...', 'info');
+      }, i * 300);
+    });
+  }
+
+  function clearLogs() {
+    document.getElementById('log-panel').innerHTML = '<div class="log-line"><span class="log-time">--:--:--</span><span class="log-level debug">[DEBUG]</span><span class="log-msg">Logs cleared</span></div>';
+  }
+
+  // =============================================
+  // MODALS
+  // =============================================
+  function openPostModal(id) {
+    const post = SAMPLE_POSTS.find(p => p.id === id);
+    if (!post) return;
+
+    const platformEmoji = { twitter: '🐦 Twitter', facebook: '📘 Facebook', instagram: '📸 Instagram' }[post.platform];
+    const statusMap = {
+      published: '<span class="status-pill pill-published"><span class="pill-dot"></span>Published</span>',
+      pending:   '<span class="status-pill pill-pending"><span class="pill-dot"></span>Scheduled</span>',
+      failed:    '<span class="status-pill pill-failed"><span class="pill-dot"></span>Failed</span>',
+    };
+
+    document.getElementById('modal-title').textContent = 'Post Details';
+    document.getElementById('modal-body').innerHTML = `
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <span class="platform-chip ${post.platform === 'twitter' ? 'chip-twitter' : post.platform === 'facebook' ? 'chip-facebook' : 'chip-instagram'}">${platformEmoji}</span>
+        ${statusMap[post.status]}
+        <span style="font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid var(--border);color:var(--text-3);">${post.source === 'ai_generated' ? '✨ AI Generated' : '👤 Manual'}</span>
+      </div>
+      <div style="background:#0d0f1e;border-radius:10px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:13px;color:var(--text-2);line-height:1.7;">${post.content}</div>
+        <div style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.15));border-radius:8px;height:120px;display:flex;align-items:center;justify-content:center;margin-top:12px;color:var(--text-3);font-size:12px;">
+          🖼️ AI-generated image (kie.ai)
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;">
+          <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Scheduled</div>
+          <div style="font-size:13px;font-weight:600;">${post.scheduled}</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;">
+          <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Retry Count</div>
+          <div style="font-size:13px;font-weight:600;">0 / 3</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="generate-btn" style="flex:1;padding:10px;" onclick="showToast('Post published immediately!','success');closeModal()">Publish Now</button>
+        <button class="topbar-btn" style="padding:10px 20px;" onclick="showToast('Post deleted','error');closeModal()">Delete</button>
+      </div>
+    `;
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  // =============================================
+  // CRON TRIGGER
+  // =============================================
+  function triggerCron(type) {
+    const msgs = {
+      post:    'Post scheduler triggered — checking for due posts...',
+      monitor: 'Comment monitor triggered — polling platforms...',
+      generate:'Content generator triggered — calling Gemini + kie.ai...',
+    };
+    showToast(msgs[type] || 'Cron triggered', 'info');
+    setTimeout(() => showToast('Cron cycle complete!', 'success'), 2200);
+  }
+
+  // =============================================
+  // TOAST
+  // =============================================
+  function showToast(msg, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    const icon = { success: '✅', error: '❌', info: 'ℹ️' }[type] || 'ℹ️';
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => toast.classList.add('show'));
+    });
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 400);
+    }, 3200);
+  }
+
+  // =============================================
+  // CRON COUNTDOWN
+  // =============================================
+  function updateCronCountdown() {
+    const el = document.getElementById('next-cron');
+    if (!el) return;
+    const now = new Date();
+    const nextMin = new Date(now);
+    nextMin.setSeconds(0, 0);
+    nextMin.setMinutes(nextMin.getMinutes() + (5 - (now.getMinutes() % 5)));
+    const diff = Math.max(0, nextMin - now);
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  }
+  setInterval(updateCronCountdown, 1000);
+  updateCronCountdown();
+
+  // =============================================
+  // SET DEFAULT SCHEDULE TIME
+  // =============================================
+  const schedInput = document.getElementById('gen-schedule');
+  if (schedInput) {
+    const d = new Date();
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    schedInput.value = d.toISOString().slice(0, 16);
+  }
+
+  // =============================================
+  // INIT
+  // =============================================
+  // Show a welcome toast on load
+  setTimeout(() => showToast('GTM Agent is running — all systems operational', 'success'), 600);
+</script>
+</body>
+</html>
