@@ -1,17 +1,23 @@
-export type Platform = 'twitter' | 'facebook' | 'instagram';
+export type Platform = 'twitter' | 'facebook' | 'instagram' | 'linkedin';
+
+export interface ImageCandidate {
+  url: string;
+  prompt: string;
+}
 
 export interface QueuedPost {
   _id?: string;
   platform: Platform;
   content: string;
   mediaUrl?: string;
+  imageCandidates?: ImageCandidate[];
+  imagePrompt?: string;
   scheduledAt: Date;
   status: 'pending' | 'pending_review' | 'published' | 'failed';
   retryCount: number;
   sourceType: 'ai_generated' | 'manual' | 'dashboard';
   topic?: string;
   researchSummary?: string;
-  imagePrompt?: string;
   createdAt: Date;
 }
 
@@ -97,6 +103,7 @@ export interface BrandConfig {
     default: string[];
     twitter?: string[];
     instagram?: string[];
+    linkedin?: string[];
   };
   avoid: string[];
 }

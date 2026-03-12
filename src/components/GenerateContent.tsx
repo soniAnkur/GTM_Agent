@@ -12,17 +12,25 @@ interface PipelineState {
   save: PipelineStep;
 }
 
+const PLATFORM_NAMES: Record<Platform, string> = {
+  twitter: 'Twitter',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  linkedin: 'LinkedIn',
+};
+
 export default function GenerateContent() {
   const [topic, setTopic] = useState('');
   const [context, setContext] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<Platform>>(
-    new Set(['twitter', 'facebook', 'instagram']),
+    new Set(['twitter', 'facebook', 'instagram', 'linkedin']),
   );
   const [includeImage, setIncludeImage] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPosts, setGeneratedPosts] = useState<QueuedPost[]>([]);
   const [researchSummary, setResearchSummary] = useState('');
   const [error, setError] = useState('');
+  const [activePlatformTab, setActivePlatformTab] = useState<Platform>('twitter');
   const [pipeline, setPipeline] = useState<PipelineState>({
     research: 'idle',
     text: 'idle',
@@ -39,6 +47,20 @@ export default function GenerateContent() {
     });
   }
 
+  async function handleSelectImage(postId: string, imageUrl: string, imagePrompt: string) {
+    await fetch('/api/posts/select-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postId, imageUrl, imagePrompt }),
+    });
+
+    setGeneratedPosts((prev) =>
+      prev.map((p) =>
+        p._id === postId ? { ...p, mediaUrl: imageUrl, imagePrompt } : p,
+      ),
+    );
+  }
+
   async function handleGenerate() {
     if (!topic.trim() || selectedPlatforms.size === 0) return;
 
@@ -49,9 +71,6 @@ export default function GenerateContent() {
     setPipeline({ research: 'running', text: 'idle', image: 'idle', save: 'idle' });
 
     try {
-      // Simulate pipeline progress via real API call
-      setPipeline((p) => ({ ...p, research: 'running' }));
-
       const res = await fetch('/api/posts/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,6 +97,10 @@ export default function GenerateContent() {
 
       setGeneratedPosts(data.posts);
       setResearchSummary(data.researchSummary);
+      // Set active tab to first platform that was generated
+      if (data.posts.length > 0) {
+        setActivePlatformTab(data.posts[0].platform);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
       setPipeline((p) => ({
@@ -94,31 +117,23 @@ export default function GenerateContent() {
 
   function getPipelineStatusClass(step: PipelineStep) {
     switch (step) {
-      case 'idle':
-        return 'pill-pending';
-      case 'running':
-        return 'pill-generating';
-      case 'done':
-        return 'pill-published';
-      case 'error':
-        return 'pill-failed';
+      case 'idle': return 'pill-pending';
+      case 'running': return 'pill-generating';
+      case 'done': return 'pill-published';
+      case 'error': return 'pill-failed';
     }
   }
 
   function getPipelineLabel(step: PipelineStep) {
     switch (step) {
-      case 'idle':
-        return 'Ready';
-      case 'running':
-        return 'Running...';
-      case 'done':
-        return 'Done';
-      case 'error':
-        return 'Failed';
+      case 'idle': return 'Ready';
+      case 'running': return 'Running...';
+      case 'done': return 'Done';
+      case 'error': return 'Failed';
     }
   }
 
-  const previewPost = generatedPosts[0];
+  const activePost = generatedPosts.find((p) => p.platform === activePlatformTab);
 
   return (
     <div>
@@ -160,43 +175,27 @@ export default function GenerateContent() {
             <div className="form-group">
               <label className="form-label">Target Platforms</label>
               <div className="platform-toggles">
-                <button
-                  className={`platform-toggle ${selectedPlatforms.has('twitter') ? 'selected-tw' : ''}`}
-                  onClick={() => togglePlatform('twitter')}
-                >
-                  {'\u{1F426}'} Twitter
-                </button>
-                <button
-                  className={`platform-toggle ${selectedPlatforms.has('facebook') ? 'selected-fb' : ''}`}
-                  onClick={() => togglePlatform('facebook')}
-                >
-                  {'\u{1F4D8}'} Facebook
-                </button>
-                <button
-                  className={`platform-toggle ${selectedPlatforms.has('instagram') ? 'selected-ig' : ''}`}
-                  onClick={() => togglePlatform('instagram')}
-                >
-                  {'\u{1F4F8}'} Instagram
-                </button>
+                {(['twitter', 'facebook', 'instagram', 'linkedin'] as Platform[]).map((p) => (
+                  <button
+                    key={p}
+                    className={`platform-toggle ${selectedPlatforms.has(p) ? (p === 'twitter' ? 'selected-tw' : p === 'facebook' ? 'selected-fb' : p === 'instagram' ? 'selected-ig' : 'selected-li') : ''}`}
+                    onClick={() => togglePlatform(p)}
+                  >
+                    {PLATFORM_NAMES[p]}
+                  </button>
+                ))}
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Include AI Image</label>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginTop: '4px',
-                }}
-              >
+              <label className="form-label">Include AI Images</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
                 <button
                   className={`toggle-switch ${includeImage ? 'on' : ''}`}
                   onClick={() => setIncludeImage(!includeImage)}
                 />
                 <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>
-                  Generate matching image via kie.ai (~$0.03)
+                  Generate 3 image options per platform via kie.ai
                 </span>
               </div>
             </div>
@@ -211,141 +210,35 @@ export default function GenerateContent() {
                   <span className="spinner white" /> Generating...
                 </>
               ) : (
-                <>{'\u{2728}'} Generate with Gemini + kie.ai</>
+                'Generate with Gemini + kie.ai'
               )}
             </button>
 
             {error && (
-              <div
-                style={{
-                  marginTop: '12px',
-                  padding: '10px 14px',
-                  background: 'rgba(244,63,94,0.1)',
-                  border: '1px solid rgba(244,63,94,0.3)',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  color: 'var(--rose)',
-                }}
-              >
+              <div style={{
+                marginTop: '12px', padding: '10px 14px',
+                background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)',
+                borderRadius: '8px', fontSize: '13px', color: 'var(--rose)',
+              }}>
                 {error}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right: Preview */}
-        <div>
-          <div className="preview-card">
-            <div className="preview-title">Content Preview</div>
-            <div className="mock-post">
-              <div className="mock-post-header">
-                <div className="mock-avatar">B</div>
-                <div>
-                  <div className="mock-name">Your Brand</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
-                    {previewPost
-                      ? `${previewPost.platform} post`
-                      : 'Awaiting generation'}
-                  </div>
-                </div>
-                <div className="mock-time">Just now</div>
-              </div>
-              <div className="mock-body">
-                {previewPost?.content ||
-                  'Your AI-generated post content will appear here after clicking Generate.'}
-              </div>
-              {previewPost?.mediaUrl ? (
-                <div className="mock-image">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={previewPost.mediaUrl} alt="Generated" />
-                </div>
-              ) : (
-                <div className="mock-image">
-                  {'\u{1F3A8}'} AI Image {includeImage ? '— will generate' : '— disabled'}
-                </div>
-              )}
-              <div className="mock-actions">
-                <span className="mock-action">{'\u{1F501}'} Repost</span>
-                <span className="mock-action">{'\u{2764}\u{FE0F}'} Like</span>
-                <span className="mock-action">{'\u{1F4AC}'} Reply</span>
-              </div>
-            </div>
-
-            {!previewPost && !isGenerating && (
-              <div style={{ padding: '12px 0 8px' }}>
-                <span className="status-pill pill-pending" style={{ fontSize: '11px' }}>
-                  <span className="pill-dot" />
-                  Awaiting generation — click Generate
-                </span>
-              </div>
-            )}
-
-            {generatedPosts.length > 1 && (
-              <div style={{ marginTop: '12px' }}>
-                <div
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: 'var(--text-3)',
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '0.07em',
-                    marginBottom: '8px',
-                  }}
-                >
-                  Also generated for:
-                </div>
-                {generatedPosts.slice(1).map((post, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      background: '#0d0f1e',
-                      borderRadius: '8px',
-                      padding: '10px 12px',
-                      marginBottom: '8px',
-                      fontSize: '12px',
-                      color: 'var(--text-2)',
-                    }}
-                  >
-                    <span
-                      className={`platform-chip ${post.platform === 'twitter' ? 'chip-twitter' : post.platform === 'facebook' ? 'chip-facebook' : 'chip-instagram'}`}
-                      style={{ marginRight: '8px' }}
-                    >
-                      {post.platform}
-                    </span>
-                    <span style={{ opacity: 0.7 }}>
-                      {post.content.slice(0, 80)}...
-                    </span>
-                  </div>
-                ))}
               </div>
             )}
           </div>
 
           {/* Pipeline Status */}
           <div className="card-panel mt-16" style={{ padding: '14px 16px' }}>
-            <div
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                marginBottom: '10px',
-                color: 'var(--text-2)',
-              }}
-            >
+            <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: '10px', color: 'var(--text-2)' }}>
               AI Pipeline Status
             </div>
             {[
-              { icon: '\u{1F50D}', label: 'Google Search grounding', step: pipeline.research },
-              { icon: '\u{1F9E0}', label: 'Gemini text generation', step: pipeline.text },
-              { icon: '\u{1F3A8}', label: 'kie.ai image generation', step: pipeline.image },
-              { icon: '\u{1F5C4}\u{FE0F}', label: 'MongoDB queued_posts', step: pipeline.save },
+              { label: 'Google Search grounding', step: pipeline.research },
+              { label: 'Gemini text generation (per platform)', step: pipeline.text },
+              { label: 'kie.ai image generation (3 per platform)', step: pipeline.image },
+              { label: 'MongoDB save', step: pipeline.save },
             ].map((item) => (
               <div key={item.label} className="pipeline-row">
-                <span className="pipeline-icon">{item.icon}</span>
                 <span className="pipeline-label">{item.label}</span>
-                <span
-                  className={`status-pill ${getPipelineStatusClass(item.step)}`}
-                  style={{ fontSize: '10px' }}
-                >
+                <span className={`status-pill ${getPipelineStatusClass(item.step)}`} style={{ fontSize: '10px' }}>
                   {item.step === 'running' ? (
                     <span className="spinner" style={{ width: '10px', height: '10px' }} />
                   ) : (
@@ -356,29 +249,143 @@ export default function GenerateContent() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Right: Platform tabs + Preview */}
+        <div>
+          {generatedPosts.length > 0 ? (
+            <>
+              {/* Platform tabs */}
+              <div className="platform-tabs">
+                {generatedPosts.map((post) => (
+                  <button
+                    key={post.platform}
+                    className={`platform-tab ${activePlatformTab === post.platform ? 'active' : ''} ${post.platform === 'twitter' ? 'tab-tw' : post.platform === 'facebook' ? 'tab-fb' : post.platform === 'instagram' ? 'tab-ig' : 'tab-li'}`}
+                    onClick={() => setActivePlatformTab(post.platform)}
+                  >
+                    {PLATFORM_NAMES[post.platform]}
+                    {(post.imageCandidates?.length || 0) > 0 && (
+                      <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: '4px' }}>
+                        ({post.imageCandidates?.length} img)
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Active post preview */}
+              {activePost && (
+                <div className="preview-card" style={{ borderRadius: '0 0 12px 12px', borderTop: 'none' }}>
+                  <div className="mock-post">
+                    <div className="mock-post-header">
+                      <div className="mock-avatar">B</div>
+                      <div>
+                        <div className="mock-name">Your Brand</div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
+                          {PLATFORM_NAMES[activePost.platform]} post
+                        </div>
+                      </div>
+                      <div className="mock-time">Just now</div>
+                    </div>
+                    <div className="mock-body">{activePost.content}</div>
+                    {activePost.mediaUrl && (
+                      <div className="mock-image" style={{ height: 'auto', aspectRatio: '1/1' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={activePost.mediaUrl} alt="Selected" />
+                      </div>
+                    )}
+                    <div className="mock-actions">
+                      <span className="mock-action">Like</span>
+                      <span className="mock-action">Comment</span>
+                      <span className="mock-action">Share</span>
+                    </div>
+                  </div>
+
+                  {/* Image candidates picker */}
+                  {activePost.imageCandidates && activePost.imageCandidates.length > 0 && (
+                    <div style={{ marginTop: '14px' }}>
+                      <div style={{
+                        fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const,
+                        letterSpacing: '0.07em', color: 'var(--text-3)', marginBottom: '10px',
+                      }}>
+                        Choose image ({activePost.imageCandidates.length} options)
+                      </div>
+                      <div className="image-candidates">
+                        {activePost.imageCandidates.map((candidate, i) => (
+                          <div
+                            key={i}
+                            className={`image-candidate ${activePost.mediaUrl === candidate.url ? 'selected' : ''}`}
+                            onClick={() => handleSelectImage(activePost._id!, candidate.url, candidate.prompt)}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={candidate.url} alt={`Option ${i + 1}`} />
+                            {activePost.mediaUrl === candidate.url && (
+                              <div className="image-candidate-check">Selected</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {/* Show prompt of selected image */}
+                      {activePost.imagePrompt && (
+                        <div style={{
+                          marginTop: '10px', fontSize: '11px', color: 'var(--text-3)',
+                          fontStyle: 'italic', lineHeight: 1.5,
+                        }}>
+                          Prompt: {activePost.imagePrompt}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Char count */}
+                  <div style={{
+                    marginTop: '12px', fontSize: '11px', color: 'var(--text-3)',
+                    display: 'flex', justifyContent: 'space-between',
+                  }}>
+                    <span>{activePost.content.length} characters</span>
+                    <span>
+                      {activePost.platform === 'twitter' ? '280 max' : activePost.platform === 'facebook' ? '2,000 max' : activePost.platform === 'instagram' ? '2,200 max' : '3,000 max'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="preview-card">
+              <div className="preview-title">Content Preview</div>
+              <div className="mock-post">
+                <div className="mock-post-header">
+                  <div className="mock-avatar">B</div>
+                  <div>
+                    <div className="mock-name">Your Brand</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>Awaiting generation</div>
+                  </div>
+                </div>
+                <div className="mock-body">
+                  Your AI-generated post content will appear here after clicking Generate.
+                </div>
+                <div className="mock-image">
+                  AI Image {includeImage ? '-- will generate 3 per platform' : '-- disabled'}
+                </div>
+              </div>
+              {!isGenerating && (
+                <div style={{ padding: '12px 0 8px' }}>
+                  <span className="status-pill pill-pending" style={{ fontSize: '11px' }}>
+                    <span className="pill-dot" />
+                    Awaiting generation
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Research Summary */}
           {researchSummary && (
             <div className="card-panel mt-16" style={{ padding: '14px 16px' }}>
-              <div
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  marginBottom: '10px',
-                  color: 'var(--text-2)',
-                }}
-              >
+              <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: '10px', color: 'var(--text-2)' }}>
                 Research Summary
               </div>
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: 'var(--text-2)',
-                  lineHeight: 1.6,
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                }}
-              >
+              <div style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.6, maxHeight: '200px', overflowY: 'auto' }}>
                 {researchSummary}
               </div>
             </div>

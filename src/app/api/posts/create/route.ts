@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { CreatePostRequest, Platform, QueuedPost } from '@/lib/types';
+import type { CreatePostRequest, Platform, QueuedPost, ImageCandidate } from '@/lib/types';
 import {
   researchTopic,
   generatePostText,
-  generateImagePrompt,
+  generateImagePrompts,
 } from '@/lib/ai/content-generator';
-import { generateImage } from '@/lib/ai/image-generator';
+import { generateImageCandidates } from '@/lib/ai/image-generator';
 import { createQueuedPost } from '@/lib/db/repositories/posts';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,45 +23,72 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Research the topic
+    console.log('[create] Step 1: Researching topic...');
     const researchSummary = await researchTopic(topic, context);
 
-    // Step 2: Generate post text for each platform
+    // Step 2: Generate post text for each platform (in parallel)
+    console.log('[create] Step 2: Generating text for', platforms.length, 'platforms...');
+    const textResults = await Promise.all(
+      platforms.map(async (platform) => ({
+        platform: platform as Platform,
+        content: await generatePostText(researchSummary, topic, platform),
+      })),
+    );
+
+    // Step 3: Generate platform-specific images (3 per platform, in parallel)
+    let imagesByPlatform: Record<string, ImageCandidate[]> = {};
+
+    if (includeImage) {
+      console.log('[create] Step 3: Generating images per platform...');
+
+      // Generate image prompts per platform (in parallel)
+      const promptResults = await Promise.all(
+        textResults.map(async ({ platform, content }) => ({
+          platform,
+          prompts: await generateImagePrompts(content, topic, platform, researchSummary),
+        })),
+      );
+
+      // Generate all images in parallel across all platforms
+      const imageResults = await Promise.all(
+        promptResults.map(async ({ platform, prompts }) => ({
+          platform,
+          candidates: await generateImageCandidates(prompts),
+        })),
+      );
+
+      for (const { platform, candidates } of imageResults) {
+        imagesByPlatform[platform] = candidates;
+      }
+    }
+
+    // Step 4: Save to DB
+    console.log('[create] Step 4: Saving posts...');
     const posts: QueuedPost[] = [];
 
-    for (const platform of platforms) {
-      const content = await generatePostText(researchSummary, topic, platform);
-
-      // Step 3: Generate image (once, shared across platforms)
-      let mediaUrl: string | undefined;
-      let imagePrompt: string | undefined;
-
-      if (includeImage && posts.length === 0) {
-        imagePrompt = await generateImagePrompt(content, topic);
-        const url = await generateImage(imagePrompt);
-        if (url) mediaUrl = url;
-      } else if (includeImage && posts.length > 0) {
-        // Reuse the image from the first post
-        mediaUrl = posts[0].mediaUrl;
-        imagePrompt = posts[0].imagePrompt;
-      }
+    for (const { platform, content } of textResults) {
+      const candidates = imagesByPlatform[platform] || [];
+      const selectedImage = candidates[0]?.url;
 
       const post = await createQueuedPost({
-        platform: platform as Platform,
+        platform,
         content,
-        mediaUrl,
+        mediaUrl: selectedImage,
+        imageCandidates: candidates.length > 0 ? candidates : undefined,
+        imagePrompt: candidates[0]?.prompt,
         scheduledAt: new Date(),
         status: 'pending_review',
         retryCount: 0,
         sourceType: 'dashboard',
         topic,
         researchSummary,
-        imagePrompt,
         createdAt: new Date(),
       });
 
       posts.push(post);
     }
 
+    console.log('[create] Done. Created', posts.length, 'posts.');
     return NextResponse.json({
       success: true,
       posts,

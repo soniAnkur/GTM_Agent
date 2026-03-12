@@ -11,7 +11,8 @@
     "hashtags": {
       "default": ["#YourBrand"],
       "twitter": ["#Tech", "#Innovation"],
-      "instagram": ["#Business", "#Growth", "#Motivation"]
+      "instagram": ["#Business", "#Growth", "#Motivation"],
+      "linkedin": ["#Leadership", "#ProfessionalDevelopment"]
     },
     "avoid": ["politics", "religion", "competitor bashing"]
   },
@@ -28,6 +29,11 @@
     "instagram": {
       "enabled": true,
       "maxPostsPerDay": 5
+    },
+    "linkedin": {
+      "enabled": true,
+      "maxPostsPerDay": 3,
+      "characterLimit": 3000
     }
   },
   "scheduling": {
